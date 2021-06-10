@@ -129,5 +129,7 @@ dmypy.json
 .pyre/
 
 # data
-data/
+!data/
+data/dump
+data/wiki
 .vscode/
