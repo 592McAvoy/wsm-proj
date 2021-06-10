@@ -6,6 +6,7 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 from db import DBManager
 from collections import defaultdict
+import config
 
 
 class Page:
@@ -32,9 +33,9 @@ class Posting:
         # print(self.docs)
         postings = []
         for doc_id in self.docs.keys():
-            # TODO: conbine TF with DOC_ID
-            # tf = self.docs[doc_id]
-            # doc_id = (doc_id << 16) | tf
+            # conbine TF with DOC_ID
+            tf = self.docs[doc_id]
+            doc_id = '|'.join(map(str, [doc_id, tf]))
             postings.append(doc_id)
 
         return postings
@@ -44,21 +45,20 @@ class ReversePostingListConstuctor:
     def __init__(self, file_path, id_start):
         self.dic = {}
         self.file_path = file_path
-        self.db = DBManager(page_db='data/db/pages.db',
-                            index_db='data/db/index.db')
+        self.db = DBManager(page_db=config.page_db,
+                            index_db=config.index_db)
         self.db.create_table()
         self.id_start = self.db.get_current_max_page_id()+1
         
-
+    
     def get_terms_from_page(self, page):
         en_stops = set(stopwords.words('english'))
         ps = PorterStemmer()
 
         def valid_word(w):
             w = w.lower()
-            skip_list = ['ref']
+
             return w.isalnum() and \
-                (w not in skip_list) and \
                 (w not in en_stops)
 
         def word2term(word):
@@ -66,14 +66,27 @@ class ReversePostingListConstuctor:
             word = ps.stem(word)
             return word
 
+        # print(page.text)
+        # print(washed_text)
+        # exit()
         sentences = nltk.sent_tokenize(page.text)
         sentences.append(page.title)
         tokenizer = nltk.RegexpTokenizer(r"\w+")
+        # tokenizer = get_tokenizer("en_US",chunkers=(HTMLChunker,))
         valid_terms = []
+        
         for sentence in sentences:
+            # print(sentence)
+            sentence = wash_text(sentence)
             words = tokenizer.tokenize(sentence)
+            # words = [w[0] for w in tokenizer(sentence)]
+            
+            # print(words)
+
             terms = [word2term(word) for word in words if valid_word(word)]
             valid_terms.extend(terms)
+            # print(terms)
+            # print('')
 
         return valid_terms
 
@@ -82,7 +95,7 @@ class ReversePostingListConstuctor:
         iid = self.id_start
         pages = []
         if DEBUG:
-            lines = lines[:100]
+            lines = lines[:1000]
 
         for i, line in enumerate(lines):
             page = Page(line, iid)
@@ -107,9 +120,24 @@ class ReversePostingListConstuctor:
         self.db.write_postings_to_db(self.dic)
 
         if DEBUG:
-            self.db.read_page(0)
-            self.db.read_posting('cliniod')
+            self.db.read_pages([0])
+            self.db.read_postings(['cliniod'])
 
+def wash_text(text):
+    out = ''
+    skip = False
+    for ch in text:
+        if ch in ['<', '{']:
+            skip = True
+            continue
+        if ch in ['>', '}']:
+            skip = False
+            continue
+        if not skip:
+            out = out + ch
+    return out.strip()
+        
+            
 
 def read_data(path='data/wiki/partitions/test.ndjson'):
     data = []
@@ -121,6 +149,10 @@ def read_data(path='data/wiki/partitions/test.ndjson'):
 
 
 if __name__ == "__main__":
+    # text = '<ref> test <ref>'
+    # text = wash_text(text)
+    # print(text)
+    # exit()
     proc = ReversePostingListConstuctor(
         'data/wiki/partitions/test.ndjson', id_start=0)
     proc.run()

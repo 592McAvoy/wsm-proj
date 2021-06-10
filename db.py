@@ -22,7 +22,6 @@ class DBManager:
             c = conn.cursor()            
             c.execute('''CREATE TABLE postings(
                         term TEXT PRIMARY KEY, 
-                        df INTEGER,
                         docs TEXT)''')
             conn.commit()
             conn.close()       
@@ -51,44 +50,65 @@ class DBManager:
 
         for term, p in postings_lists.items():
             postings = p.get_postings()
-            posting_str = ','.join(map(str, postings))
-            item = (term, len(postings), posting_str)
+            # posting_str = ','.join(map(str, postings))
+            posting_str = ','.join(postings)
+            item = (term, posting_str)
             try:
-                c.execute("INSERT INTO postings VALUES (?, ?, ?)", item) # term, df, doc-list
+                c.execute("INSERT INTO postings VALUES (?, ?)", item) # term, df, doc-list
             except: # Existing term
-                ret = c.execute('SELECT * FROM postings WHERE term=?', (term,))
-                for row in ret:
-                    df = row[1]
-                    df += len(postings)
-                    posting_str_before = row[2]
-                    posting_str = posting_str_before+','+posting_str
-                    c.execute('UPDATE postings SET df=?, docs=? WHERE term=?', (df, posting_str, term))
-                    break
+                cursor = c.execute('SELECT * FROM postings WHERE term=?', (term,))
+                row = cursor.fetchone()
+                posting_str_before = row[1]
+                posting_str = posting_str_before+','+posting_str
+                c.execute('UPDATE postings SET docs=? WHERE term=?', (posting_str, term))
+                    
             # break
 
         conn.commit()
         conn.close()
 
-    def read_page(self, iid):
-        conn = sqlite3.connect(self.page_db)
-        c = conn.cursor()
 
-        ret = c.execute('SELECT * FROM pages WHERE id=?', (iid,))
-        for row in ret:
-            print(row)
-        conn.close()
-        
-    
-    def read_posting(self, term):
+    def get_vocabs(self):
         conn = sqlite3.connect(self.index_db)
         c = conn.cursor()
 
-        ret = c.execute('SELECT * FROM postings WHERE term=?', (term,))
-        for row in ret:
-            print(row)
+        cursor = c.execute('SELECT term FROM postings')
+        rec = cursor.fetchall()          
+            
+        conn.close()
+        return rec
+
+    def read_pages(self, ids):
+        conn = sqlite3.connect(self.page_db)
+        c = conn.cursor()
+
+        rec = []
+        for iid in ids:
+            cursor = c.execute('SELECT * FROM pages WHERE id=?', (iid,))
+            row = cursor.fetchone()            
+            rec.append(row)
+            
+        conn.close()
+        return rec
+        
+    
+    def read_postings(self, terms):
+        conn = sqlite3.connect(self.index_db)
+        c = conn.cursor()
+
+        rec = []
+        for term in terms:
+            # print(term)
+            cursor = c.execute('SELECT * FROM postings WHERE term=?', (term,))
+            row = cursor.fetchone()
+            if row is None:
+                print(f'Term \'{term}\' does not exist')
+                row = (term, '')
+            rec.append(row)
+            
 
         conn.close()
-        return row
+        return rec
 
     def get_current_max_page_id(self):
         conn = sqlite3.connect(self.page_db)
