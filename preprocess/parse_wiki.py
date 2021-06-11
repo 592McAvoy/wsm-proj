@@ -61,7 +61,7 @@ def parse_wiki(data_path, limit=None, save=True):
         with open(out_dir, 'w') as fout:
             # Write as json
             for p in handler._pages:
-                fout.write(json.dumps(p) + '\n')
+                print(json.dumps(p), file=fout)
         
         print(f'{len(os.listdir(partition_dir))} files processed.', end = '\r')
 

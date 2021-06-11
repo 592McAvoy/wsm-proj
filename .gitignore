@@ -132,4 +132,5 @@ dmypy.json
 !data/
 data/dump
 data/wiki
+data/db
 .vscode/

@@ -1,3 +1,4 @@
+
 import json
 import nltk
 # nltk.download('stopwords')
@@ -7,18 +8,56 @@ from nltk.stem import PorterStemmer
 from db import DBManager
 from collections import defaultdict
 import config
+from utils import extract_terms_from_sentence, wash_text
+from multiprocessing import Pool
+import os
+from timeit import default_timer as timer
+import itertools
 
+
+def get_terms_from_page(page):        
+    sentences = nltk.sent_tokenize(page.text)
+    sentences.append(page.title)
+
+    stop_words = set(stopwords.words('english'))
+    stemmer = PorterStemmer()
+
+    valid_terms = []
+    for sentence in sentences:
+        sentence = wash_text(sentence)
+        terms = extract_terms_from_sentence(sentence, stop_words, stemmer)
+        valid_terms.extend(terms)
+
+    return valid_terms
+
+    
+def process_lines(lines):
+    pages = []
+    dic = {}
+    for i, line in enumerate(lines):
+        page = Page(line)
+        pages.append(page)
+
+        valid_terms = get_terms_from_page(page)
+
+        for term in valid_terms:
+            if term not in dic.keys():
+                dic[term] = Posting(term)
+            dic[term].add_doc(page.id)
+
+        # if (i+1) % 1000 == 0:
+        #     print(f'{i+1} pages processed.', end='\r')
+    return pages, dic
+        
 
 class Page:
-    def __init__(self, page, iid=0):
-        self.id = iid
-        self.title = page[0]
-        self.text = page[1]
-        # self.wikilinks = page[2]
-        # self.exlinks = pape[3]
+    def __init__(self, page):
+        self.id = page[0]
+        self.title = page[1]
+        self.text = page[2]
 
     def __str__(self):
-        return f'[ID: {self.id}]\tTitle:{self.title}\n{self.text}'
+        return f'[ID: {self.id}]\tTitle :{self.title}\n{self.text}'
 
 
 class Posting:
@@ -39,105 +78,78 @@ class Posting:
             postings.append(doc_id)
 
         return postings
+    
+    def __str__(self):
+        return self.term
 
+def merge_dics(dics):
+    def _merge_posting(p1, p2):
+        p1.docs.update(p2.docs)
+        return p1
+
+    dic = dics[0]
+    for d in dics[1:]:
+        for term, posting in d.items():
+            if term in dic.keys():
+                dic[term] = _merge_posting(dic[term], posting)
+            else:
+                dic[term] = posting
+    return dic
+
+def split(a, n):
+    k, m = divmod(len(a), n)
+    return (a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n))
 
 class ReversePostingListConstuctor:
-    def __init__(self, file_path, id_start):
-        self.dic = {}
+    def __init__(self, file_path):
         self.file_path = file_path
         self.db = DBManager(page_db=config.page_db,
                             index_db=config.index_db)
         self.db.create_table()
-        self.id_start = self.db.get_current_max_page_id()+1
-        
+
     
-    def get_terms_from_page(self, page):
-        en_stops = set(stopwords.words('english'))
-        ps = PorterStemmer()
-
-        def valid_word(w):
-            w = w.lower()
-
-            return w.isalnum() and \
-                (w not in en_stops)
-
-        def word2term(word):
-            word = word.lower()
-            word = ps.stem(word)
-            return word
-
-        # print(page.text)
-        # print(washed_text)
-        # exit()
-        sentences = nltk.sent_tokenize(page.text)
-        sentences.append(page.title)
-        tokenizer = nltk.RegexpTokenizer(r"\w+")
-        # tokenizer = get_tokenizer("en_US",chunkers=(HTMLChunker,))
-        valid_terms = []
-        
-        for sentence in sentences:
-            # print(sentence)
-            sentence = wash_text(sentence)
-            words = tokenizer.tokenize(sentence)
-            # words = [w[0] for w in tokenizer(sentence)]
-            
-            # print(words)
-
-            terms = [word2term(word) for word in words if valid_word(word)]
-            valid_terms.extend(terms)
-            # print(terms)
-            # print('')
-
-        return valid_terms
-
-    def run(self, DEBUG=True):
+    def run(self, DEBUG=True, concurrent=False):
+        start = timer()
+        print(f"Load json from {self.file_path}...")
         lines = read_data(self.file_path)
-        iid = self.id_start
-        pages = []
+        print(f"Finish in {timer()-start} s")
+        
         if DEBUG:
             lines = lines[:1000]
 
-        for i, line in enumerate(lines):
-            page = Page(line, iid)
-            pages.append(page)
+        start = timer()
+        if not concurrent:
+            pages, dic = process_lines(lines)
 
-            valid_terms = self.get_terms_from_page(page)
-            # print(f'Title: {page.title}')
-            # print(valid_terms)
+            print(f'Sequenctial processing uses {timer()-start} s')
+        else:
+            n_cpu = os.cpu_count()//2
+            print(f'{n_cpu} CPUs')
+            pool = Pool(processes=n_cpu)
+            n_part_lines = split(lines, n_cpu)
+            results = pool.map(process_lines, n_part_lines)
 
-            for term in valid_terms:
-                if term not in self.dic.keys():
-                    self.dic[term] = Posting(term)
-                self.dic[term].add_doc(iid)
+            pool.close()
+            pool.join()
 
-            if (i+1) % 1000 == 0:
-                print(f'{i+1} pages processed.', end='\r')
+            page_list, dic_list = zip(*results)
+            pages = list(itertools.chain(*page_list))
+            # assert(len(pages) == 1000)
 
-            # doc id increment
-            iid += 1
+            dic = merge_dics(dic_list) 
+            # assert(dic.keys() == dic1.keys())
+
+            # print(f'Concurrent processing uses {timer()-start} s')
 
         self.db.write_pages_to_db(pages)
-        self.db.write_postings_to_db(self.dic)
+        self.db.write_postings_to_db(dic)
 
-        if DEBUG:
-            self.db.read_pages([0])
-            self.db.read_postings(['cliniod'])
-
-def wash_text(text):
-    out = ''
-    skip = False
-    for ch in text:
-        if ch in ['<', '{']:
-            skip = True
-            continue
-        if ch in ['>', '}']:
-            skip = False
-            continue
-        if not skip:
-            out = out + ch
-    return out.strip()
+        # if DEBUG:
+        #     self.db.read_pages([0])
+        #     self.db.read_postings(['cliniod'])
         
-            
+        print(f"File:{self.file_path.split('/')[-1]}:\t{len(pages)} pages processed in {timer()-start} s")
+
 
 def read_data(path='data/wiki/partitions/test.ndjson'):
     data = []
@@ -153,6 +165,10 @@ if __name__ == "__main__":
     # text = wash_text(text)
     # print(text)
     # exit()
-    proc = ReversePostingListConstuctor(
-        'data/wiki/partitions/test.ndjson', id_start=0)
-    proc.run()
+    wiki_dir = 'data/wiki/partitions'
+    for part in os.listdir(wiki_dir)[:2]:
+        fn = os.path.join(wiki_dir, part)
+        
+        # fn = 'data/wiki/partitions/test.ndjson'
+        proc = ReversePostingListConstuctor(file_path=fn)
+        proc.run(DEBUG=False, concurrent=True)

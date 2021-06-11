@@ -6,6 +6,7 @@ from nltk.corpus import stopwords
 from nltk.stem import PorterStemmer
 import math
 import enchant
+from fnmatch import fnmatch
 
 
 def cosine_similarity(v1, v2):
@@ -55,7 +56,7 @@ class SearchManager:
 
         return tf*idf
 
-    def search(self, query, ret_N=3):
+    def search(self, query, ret_N=5):
         terms = self.get_terms_from_query(query)
         unique_terms = set(terms)
 
@@ -94,7 +95,7 @@ class SearchManager:
         for i, page in enumerate(pages):
             print('[ID: {:04d} | Score: {:.4f}] Title: {}'.format(
                 page[0], doc_scores[i][1], page[1]))
-            print(f'{page[2][:300]} ...\n')
+            print(f'{page[2][:1000]} ...\n')
 
     def fuzzy_search(self, query):
         new_query = query[:]
@@ -119,9 +120,24 @@ class SearchManager:
 
         self.search(new_query)
 
-    def wildcard_search(self):
-        pass
+    def wildcard_search(self, query):
+        """
+        Support ? and *
 
+        Example:
+            he*o -> hello, hero, ...
+            he?o -> hero
+        """
+        new_query = query[:]
+        for t in query.split():
+            if '*' in t or '?' in t:
+                words = []
+                for word in self.word_freq.keys():
+                    if fnmatch(word, t):
+                        words.append(word)
+                    if len(words) == 5:
+                        break
+                print(f'pattern:{t}\t results:{words}')
 
 
 def read_freq_word():
@@ -140,7 +156,8 @@ if __name__ == "__main__":
     # exit()
     proc = SearchManager()
     print(f'Total Docs: {proc.total_docs}')
-    query = 'holy molly'
+    query = 'hello molly'
     print(query)
-    # proc.search(query)
-    proc.fuzzy_search(query)
+    proc.search(query)
+    # proc.fuzzy_search(query)
+    # proc.wildcard_search(query)
