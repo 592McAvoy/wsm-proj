@@ -133,6 +133,6 @@ dmypy.json
 data/dump
 data/wiki
 # data/db
-data/db/index.db
-data/db/pages.db
+data/db/index1.db
+data/db/pages1.db
 .vscode/
