@@ -1,5 +1,40 @@
 import sqlite3
 import os
+from collections import defaultdict
+
+
+class Page:
+    def __init__(self, page):
+        self.id = page[0]
+        self.title = page[1]
+        self.text = page[2]
+
+    def __str__(self):
+        return f'[ID: {self.id}]\tTitle :{self.title}\n{self.text}'
+
+
+class Posting:
+    def __init__(self, term):
+        self.term = term
+        self.docs = defaultdict(int)  # {doc_id: term frequency}
+
+    def add_doc(self, doc_id):
+        self.docs[doc_id] += 1
+
+    def get_postings(self):
+        # print(self.docs)
+        postings = []
+        for doc_id in self.docs.keys():
+            # conbine TF with DOC_ID
+            tf = self.docs[doc_id]
+            doc_id = '|'.join(map(str, [doc_id, tf]))
+            postings.append(doc_id)
+
+        return postings
+
+    def __str__(self):
+        return self.term
+
 
 class DBManager:
     def __init__(self, page_db, index_db):
@@ -9,7 +44,7 @@ class DBManager:
     def create_table(self):
         if not os.path.exists(self.page_db):
             conn = sqlite3.connect(self.page_db)
-            c = conn.cursor()  
+            c = conn.cursor()
             c.execute(''' CREATE TABLE pages(
                     id INTEGER PRIMARY KEY,
                     title TEXT,
@@ -19,21 +54,39 @@ class DBManager:
 
         if not os.path.exists(self.index_db):
             conn = sqlite3.connect(self.index_db)
-            c = conn.cursor()            
+            c = conn.cursor()
             c.execute('''CREATE TABLE postings(
                         term TEXT PRIMARY KEY, 
                         docs TEXT)''')
             conn.commit()
-            conn.close()       
-        
+            conn.close()
+
+    def create_idx(self):
+        try:
+            conn = sqlite3.connect(self.index_db)
+            c = conn.cursor()
+            c.execute('''CREATE INDEX term_index ON postings (term)''')
+            conn.commit()
+            conn.close()
+
+            conn = sqlite3.connect(self.page_db)
+            c = conn.cursor()
+            c.execute(''' CREATE INDEX doc_index ON pages (id)''')
+            conn.commit()
+            conn.close()
+        except:
+            print('index existed')
+        else:
+            print('Index created')
 
     def write_pages_to_db(self, pages):
         conn = sqlite3.connect(self.page_db)
         c = conn.cursor()
-        
+
         for page in pages:
             t = (page.id, page.title, page.text)
-            c.execute("INSERT INTO pages VALUES (?, ?, ?)", t) # term, df, doc-list
+            # term, df, doc-list
+            c.execute("INSERT INTO pages VALUES (?, ?, ?)", t)
 
         conn.commit()
         conn.close()
@@ -54,58 +107,65 @@ class DBManager:
             posting_str = ','.join(postings)
             item = (term, posting_str)
             try:
-                c.execute("INSERT INTO postings VALUES (?, ?)", item) # term, df, doc-list
-            except: # Existing term
-                cursor = c.execute('SELECT * FROM postings WHERE term=?', (term,))
+                c.execute("INSERT INTO postings VALUES (?, ?)",
+                          item)  # term, df, doc-list
+            except:  # Existing term
+                cursor = c.execute(
+                    'SELECT * FROM postings WHERE term=?', (term,))
                 row = cursor.fetchone()
                 posting_str_before = row[1]
                 posting_str = posting_str_before+','+posting_str
-                c.execute('UPDATE postings SET docs=? WHERE term=?', (posting_str, term))
-                    
+                c.execute('UPDATE postings SET docs=? WHERE term=?',
+                          (posting_str, term))
+
             # break
 
         conn.commit()
         conn.close()
 
-
-    def get_vocabs(self):
+    def get_vocabs_size(self):
         conn = sqlite3.connect(self.index_db)
         c = conn.cursor()
 
-        cursor = c.execute('SELECT term FROM postings')
-        rec = cursor.fetchall()          
-            
+        cursor = c.execute('SELECT count(1) FROM postings')
+        rec = cursor.fetchone()[0]
+
         conn.close()
         return rec
+
+    def exist_page(self, iid):
+        conn = sqlite3.connect(self.page_db)
+        c = conn.cursor()
+
+        cursor = c.execute('SELECT * FROM pages WHERE id=?', (iid,))
+        row = cursor.fetchone()
+
+        conn.close()
+        return (row is not None)
 
     def read_pages(self, ids):
         conn = sqlite3.connect(self.page_db)
         c = conn.cursor()
 
-        rec = []
-        for iid in ids:
-            cursor = c.execute('SELECT * FROM pages WHERE id=?', (iid,))
-            row = cursor.fetchone()            
-            rec.append(row)
-            
+        placeholder = ','.join(['?'] * len(ids))
+        query_str = f"SELECT * FROM pages WHERE id in ({placeholder})"
+        # print(query_str)
+        cursor = c.execute(query_str, list(ids))
+        rec = cursor.fetchall()
+
         conn.close()
         return rec
-        
-    
+
     def read_postings(self, terms):
         conn = sqlite3.connect(self.index_db)
         c = conn.cursor()
 
-        rec = []
-        for term in terms:
-            # print(term)
-            cursor = c.execute('SELECT * FROM postings WHERE term=?', (term,))
-            row = cursor.fetchone()
-            if row is None:
-                print(f'Term \'{term}\' does not exist')
-                row = (term, '')
-            rec.append(row)
-            
+        placeholder = ','.join(['?'] * len(terms))
+        query_str = f"SELECT * FROM postings WHERE term in ({placeholder})"
+        # print(query_str)
+        cursor = c.execute(query_str, list(terms))
+
+        rec = cursor.fetchall()
 
         conn.close()
         return rec
@@ -118,8 +178,25 @@ class DBManager:
         for row in ret:
             current_id = row[0]
         conn.close()
-        
+
         if current_id is None:
             current_id = -1
         return current_id
 
+    def delete_number_term(self):
+        import re
+
+        def match_number(item):
+            expr = '^[+-]?[0-9]*([0-9]\\.|[0-9]|\\.[0-9])[0-9]*(e[+-]?[0-9]+)?$'
+            return re.match(expr, item) is not None
+
+        conn = sqlite3.connect(self.index_db)
+        conn.create_function("IS_NUMBER", 1, match_number)
+        c = conn.cursor()
+
+        cursor = c.execute('''
+        DELETE FROM postings 
+        WHERE IS_NUMBER(term)
+        ''')
+        conn.commit()
+        conn.close()
