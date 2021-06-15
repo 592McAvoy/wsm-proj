@@ -9,7 +9,7 @@ import enchant
 from fnmatch import fnmatch
 from utils import extract_terms_from_sentence, wash_text, cosine_similarity, split, cal_norm_tf_idf, extarct_id_tf, merge_scores
 
-def process_term_posting(packed_params, total_pages=21229916):
+def process_term_posting(packed_params, total_pages=11650115):
     """
     Calculate normed query tf-idf and doc tf-idf for term 
 
@@ -61,7 +61,7 @@ class SearchManager:
         self.recommender = self._init_recommender()
 
         # print(f'Vocab size: {self.db.get_vocabs_size()}')
-        # print(f'Total Docs: {self.total_pages}')
+        # print(f'Total Docs: {self.db.get_page_size()}')
         # self.db.create_idx()
 
     def _init_common_word(self):
@@ -77,7 +77,7 @@ class SearchManager:
 
         return recommender
 
-    def _search(self, query, concurrent=True):
+    def _search(self, query, concurrent=True, rank_mode='cos'):
         terms = extract_terms_from_sentence(wash_text(query))
         unique_terms = set(terms)
         n_unique = len(unique_terms)
@@ -91,7 +91,7 @@ class SearchManager:
 
         # 1. calculate tf-idf for query and docs
         tf_query = [terms.count(t[0]) for t in postings]
-        if not concurrent:
+        if not concurrent or n_unique<2:
             start = timer()
             query_vec, doc_vecs = process_term_posting((postings, tf_query))
             print(f"Sequential process cost {timer()-start} s")
@@ -114,16 +114,19 @@ class SearchManager:
         doc_scores = []  # (doc_id, score)
         for doc_id, doc_vec in doc_vecs.items():
             # calculate cosine similarity
-            doc_scores.append((doc_id, cosine_similarity(query_vec, doc_vec)))
+            if rank_mode == 'cos':
+                doc_scores.append((doc_id, cosine_similarity(query_vec, doc_vec)))
+            else:
+                # add new ranking method here
+                raise NotImplementedError(rank_mode)
 
-        # sort
+
+        # 3. return first N pages (id, score)
         doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
-        print(len(doc_scores))
+        print(f'Searched for {len(doc_scores)} pages')
 
-        # 3. return first N pages
-        page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
-        pages = self.db.read_pages(page_ids)
-        return pages, doc_scores
+        return doc_scores[:config.max_return_docs]
+
 
     def most_frequent(self, candidates):
         ret = (candidates[0], -1)
@@ -134,7 +137,7 @@ class SearchManager:
                 ret = (s, int(self.word_freq[s]))
         return ret[0]
 
-    def fuzzy_search(self, query):
+    def fuzzy_query(self, query):
         # print(common_words.__)
         new_query = query[:]
         for t in query.split():
@@ -152,7 +155,7 @@ class SearchManager:
         # self.search(new_query)
         return new_query
 
-    def wildcard_search(self, query):
+    def wildcard_query(self, query):
         """
         Support *
 
@@ -187,12 +190,21 @@ class SearchManager:
         print(f"Searching for {query}")
 
         if '*' in query:
-            query = self.wildcard_search(query)
+            query = self.wildcard_query(query)
 
-        query = self.fuzzy_search(query)
+        fuzzy_query = self.fuzzy_query(query)
 
-        pages, doc_scores = self._search(query, concurrent=True)
+        # pages, doc_scores = self._search(query, concurrent=True)
+        doc_scores = self._search(query, concurrent=True)
 
+        if fuzzy_query != query:
+            doc_scores_fuzzy = self._search(fuzzy_query, concurrent=True)
+            doc_scores.extend(doc_scores_fuzzy)
+            doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+
+        # for i, page in enumerate(pages):
+        page_ids = [d[0] for d in doc_scores]
+        pages = self.db.read_pages(page_ids)
         for i, page in enumerate(pages):
             print('[ID: {:04d} | Score: {:.4f}] Title: {}'.format(
                 page[0], doc_scores[i][1], page[1]))
@@ -215,7 +227,7 @@ if __name__ == "__main__":
     # exit()
     proc = SearchManager()
 
-    query = 'har* university'
+    query = 'panda'
     proc.search(query)
     # proc.fuzzy_search(query)
 
