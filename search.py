@@ -54,8 +54,8 @@ def process_term_posting(packed_params, total_pages=11650115):
 
 class SearchManager:
     def __init__(self):
-        # self.db = DBManager(page_db=config.demo_page_db, index_db=config.demo_index_db)
-        self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+        self.db = DBManager(page_db=config.demo_page_db, index_db=config.demo_index_db)
+        # self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
@@ -251,7 +251,8 @@ class SearchManager:
             if page[0] == page_id:
                 return {
                     'title':page[1],
-                    'content': wash_text(page[2]),
+                    'content': wash_text(page[2]), #,
+                    # wash_text(page[2]),
                 }
         raise NotImplementedError(page_id)
 

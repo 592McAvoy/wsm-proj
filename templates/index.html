@@ -202,11 +202,11 @@
         template = template.replace('{ID}', data['ID'])
         template = template.replace(/\{(.+?)}(\{.+?})/g, "<div style='display:inline' data-toggle=\"tooltip\" data-placement=\"left\" title=\"$1\">$2</div>");
         {#instrument过长内容截断#}
-        var max_len=400;
+        var max_len=500;
         if(data['content'].length>max_len)
             data['content']=data['content'].substr(0,max_len)+"...";
         for (var key in data) {
-            template = template.replace('{' + key + '}', data[key]==''? '无':data[key])
+            template = template.replace('{' + key + '}', data[key]==''? '/':data[key])
         }
         if ('qysler' in data)
             for (var key in data['qysler'][0]){
@@ -257,9 +257,13 @@
                     $("#display-area").html('');
                     data=$.parseJSON(data);
                     console.log(data)
-                    console.log(data.length)
-                    for( i=0; i<data.length; i++){
-                        $("#display-area").append(wrap_data(data[i],type))
+                    pages=data['pages']
+                    time=data['time']
+                    querys=data['querys']
+                    console.log(querys)
+                    for( i=0; i<pages.length; i++){
+                        console.log(pages[i])
+                        $("#display-area").append(wrap_data(pages[i],type))
                     }
                     $('[data-toggle="tooltip"]').tooltip()
                 }

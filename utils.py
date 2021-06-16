@@ -35,9 +35,12 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
 
 
 def wash_text(text):
-    out = re.sub(r'(<|{).*(>|})', '', text)
-
-    return out.strip()
+    # out = re.sub(r'(<|{).*(>|})', '', text)
+    cleanr = re.compile('<.*?>')
+    out = re.sub(cleanr, '', text)
+    out = out.replace(" ==", "\n==")
+    out = out.replace("== ", "==\n")
+    return out
 
 
 def get_terms_from_page(page):
