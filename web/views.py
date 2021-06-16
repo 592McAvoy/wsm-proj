@@ -5,17 +5,18 @@ import json
 from search import SearchManager
 
 proc = SearchManager()
-querys = None
+
 
 def index(request):
-    return render(request,'index.html')
+    return render(request, 'index.html')
+
 
 def details(request):
-    id=int(request.GET['id'])
+    id = int(request.GET['id'])
     page = proc.read_page(id)
     print('id is ', id)
-    print(querys)
-    para={'id':id, 'title': page['title'], 'content': page['content']}
+    page['content'] = page['content'].replace(" Art ", "<font color='red'><b> Art </b></font>")
+    para = {'id': id, 'title': page['title'], 'content': page['content']}
     return render(request, 'details.html', para)
 
 
@@ -26,9 +27,7 @@ def search(request):
     print(query)
     page_list, time_str, querys = proc.search(query)
 
-    para = {'pages': page_list,
-            'time': time_str,
-            'querys': querys}
+    para = {'pages': page_list, 'time': time_str, 'querys': querys}
     result_json = json.dumps(para)
     return HttpResponse(result_json)
 
