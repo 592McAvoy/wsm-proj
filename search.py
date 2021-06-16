@@ -7,7 +7,8 @@ from multiprocessing import Pool
 from timeit import default_timer as timer
 import enchant
 from fnmatch import fnmatch
-from utils import extract_terms_from_sentence, wash_text, cosine_similarity, split, cal_norm_tf_idf, extarct_id_tf, merge_scores
+from utils import extract_terms_from_sentence, wash_text, cosine_similarity, \
+    split, cal_norm_tf_idf, extarct_id_tf, merge_scores, remove_puntuation
 
 def process_term_posting(packed_params, total_pages=11650115):
     """
@@ -15,7 +16,7 @@ def process_term_posting(packed_params, total_pages=11650115):
 
     Args:
         posting (tuple): (term, docs)
-        terms (list): list of term frequency in query
+        tf_query (list): list of term frequency in query
         total_pages (int): the amount of pages
 
     Returns:
@@ -78,7 +79,10 @@ class SearchManager:
         return recommender
 
     def _search(self, query, concurrent=True, rank_mode='cos'):
-        terms = extract_terms_from_sentence(wash_text(query))
+        terms = extract_terms_from_sentence(query)
+        if len(terms) == 0:
+            return None
+
         unique_terms = set(terms)
         n_unique = len(unique_terms)
         if n_unique < 2:
@@ -91,7 +95,7 @@ class SearchManager:
 
         # 1. calculate tf-idf for query and docs
         tf_query = [terms.count(t[0]) for t in postings]
-        if not concurrent or n_unique<2:
+        if not concurrent or len(postings)<2:
             start = timer()
             query_vec, doc_vecs = process_term_posting((postings, tf_query))
             print(f"Sequential process cost {timer()-start} s")
@@ -145,9 +149,10 @@ class SearchManager:
             # replace the non-exist word by the most similiar and frequently used one
             if not exist:
                 suggest = self.recommender.suggest(t)[:5]
-                # print(suggest)
-                pick = self.most_frequent(suggest)
-                new_query = new_query.replace(t, pick)
+                if len(suggest) > 0:
+                    # print(suggest)
+                    pick = self.most_frequent(suggest)
+                    new_query = new_query.replace(t, pick)
 
         if query != new_query:
             print(f'Do you mean \'{new_query}\'?')
@@ -180,35 +185,47 @@ class SearchManager:
         # self.search(new_query)
         return new_query
 
-    def search(self, query):
+    def search(self, query, concurrent=True):
         """
         wrapper of search logic
 
         Args:
             query (string): the input query string
         """
-        print(f"Searching for {query}")
-
+        print(f"Searching for \'{query}\'")
+        
+        start = timer()
+        query = wash_text(remove_puntuation(query))
+        # print(f'washed: {query}')
         if '*' in query:
             query = self.wildcard_query(query)
 
         fuzzy_query = self.fuzzy_query(query)
 
+        # exit()
+
         # pages, doc_scores = self._search(query, concurrent=True)
-        doc_scores = self._search(query, concurrent=True)
+        doc_scores = self._search(query, concurrent=concurrent)
+        if doc_scores is None:
+            print(f'No valid input in {query}')
+            return
 
         if fuzzy_query != query:
-            doc_scores_fuzzy = self._search(fuzzy_query, concurrent=True)
-            doc_scores.extend(doc_scores_fuzzy)
-            doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+            doc_scores_fuzzy = self._search(fuzzy_query, concurrent=concurrent)
+            if doc_scores_fuzzy is not None:
+                doc_scores.extend(doc_scores_fuzzy)
+                doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
 
         # for i, page in enumerate(pages):
         page_ids = [d[0] for d in doc_scores]
         pages = self.db.read_pages(page_ids)
-        for i, page in enumerate(pages):
-            print('[ID: {:04d} | Score: {:.4f}] Title: {}'.format(
-                page[0], doc_scores[i][1], page[1]))
-            print(f'{wash_text(page[2][:1000])} ...\n')
+
+        time_cost = timer()-start
+        return pages, time_cost
+        # for i, page in enumerate(pages):
+        #     print('[ID: {:04d} | Score: {:.4f}] Title: {}'.format(
+        #         page[0], doc_scores[i][1], page[1]))
+        #     print(f'{wash_text(page[2][:1000])} ...\n')
 
 
 def read_freq_word():
@@ -223,13 +240,9 @@ def read_freq_word():
 
 
 if __name__ == "__main__":
-    # read_freq_word()
-    # exit()
     proc = SearchManager()
 
-    query = 'panda'
+    # query = 'go out for experct snacks'
+    query = input('Please input query:\n')
     proc.search(query)
-    # proc.fuzzy_search(query)
 
-    # query = 'miew wo'
-    # proc.wildcard_search(query)

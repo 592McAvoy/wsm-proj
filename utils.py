@@ -14,7 +14,8 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
 
     def valid_word(w):
         w = w.lower()
-        return w.isalnum() and \
+        # return w.isalnum() and \
+        return w.isalpha() and\
             (w not in stop_words)
 
     def word2term(word):
@@ -26,7 +27,9 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
 
     tokenizer = nltk.RegexpTokenizer(r"\w+")
     words = tokenizer.tokenize(sentence)
+    # print(words)
     terms = [word2term(word) for word in words if valid_word(word)]
+    # print(terms)
 
     return terms
 
@@ -162,3 +165,9 @@ def extarct_id_tf(docs):
         # doc_id, tf
         ret.append((int(doc[0]), int(doc[1])))
     return ret
+
+import string
+def remove_puntuation(s):
+    # table = string.maketrans("","")
+    regex = re.compile('[%s]' % re.escape(string.punctuation))
+    return regex.sub('', s)
