@@ -15,6 +15,7 @@
         .subsubtitle{
             font-weight: bold;
         }
+        ;
     </style>
     <title>检索系统</title>
 </head>
@@ -24,12 +25,9 @@
         <div class="card-body">
 
             <p class="card-text subtitle">{{ title }}</p>
-            <!-- <p class="card-text subsubtitle">本院认为</p> -->
-            <p class="card-text">{{ content }}</p>
-            <!-- <p class="card-text subsubtitle">审判人员</p>
-            <p class="card-text">审判长杨阳<br />人民陪审员石顺芳<br />人民陪审员刘佩瑶</p>
-            <p class="card-text subsubtitle">裁判日期</p>
-            <p class="card-text">二〇一六年九月一日</p> -->
+             <div class="card-text" white-space="pre-line">
+                {{ content |linebreaks }}
+            </div> 
         </div>
     </div>
 </center>

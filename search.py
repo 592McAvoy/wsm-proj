@@ -203,13 +203,18 @@ class SearchManager:
 
         fuzzy_query = self.fuzzy_query(query)
 
+        querys = [query, fuzzy_query]
+        if query == fuzzy_query:
+            querys[1] = None
+
         # exit()
 
         # pages, doc_scores = self._search(query, concurrent=True)
         doc_scores = self._search(query, concurrent=concurrent)
         if doc_scores is None:
             print(f'No valid input in {query}')
-            return
+           
+            return [], '0', querys
 
         if fuzzy_query != query:
             doc_scores_fuzzy = self._search(fuzzy_query, concurrent=concurrent)
@@ -231,13 +236,11 @@ class SearchManager:
             } for page in pages]
 
         time_str = '{:.2f}'.format(time_cost)
-        querys = [query, fuzzy_query]
-        if query == fuzzy_query:
-            querys[1] = None
         
-        return page_list
         
-        # return page_list, time_str, querys
+        # return page_list
+        
+        return page_list, time_str, querys
         
         # return result_dict
 
@@ -253,7 +256,8 @@ class SearchManager:
             if page[0] == page_id:
                 return {
                     'title':page[1],
-                    'content': wash_text(page[2]),
+                    'content': wash_text(page[2]), #,
+                    # wash_text(page[2]),
                 }
         raise NotImplementedError(page_id)
 

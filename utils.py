@@ -39,7 +39,8 @@ def wash_text(text):
     cleanr = re.compile('<.*?>')
     out = re.sub(cleanr, '', text)
     out = out.replace(" ==", "\n==")
-    return out.strip()
+    out = out.replace("== ", "==\n")
+    return out
 
 
 def get_terms_from_page(page):
