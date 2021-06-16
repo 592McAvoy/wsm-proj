@@ -5,6 +5,7 @@ import json
 from search import SearchManager
 
 proc = SearchManager()
+querys = None
 
 def index(request):
     return render(request,'index.html')
@@ -12,6 +13,8 @@ def index(request):
 def details(request):
     id=int(request.GET['id'])
     page = proc.read_page(id)
+    print('id is ', id)
+    print(querys)
     para={'id':id, 'title': page['title'], 'content': page['content']}
     return render(request, 'details.html', para)
 
