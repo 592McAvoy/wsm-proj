@@ -14,7 +14,7 @@ def process_term_posting(packed_params, total_pages=11650115):
     """
     Calculate normed query tf-idf and doc tf-idf for term 
 
-    Args:
+    Args: 
         posting (tuple): (term, docs)
         tf_query (list): list of term frequency in query
         total_pages (int): the amount of pages
@@ -60,6 +60,7 @@ class SearchManager:
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
         self.recommender = self._init_recommender()
+        self.page_buffer = None
 
         # print(f'Vocab size: {self.db.get_vocabs_size()}')
         # print(f'Total Docs: {self.db.get_page_size()}')
@@ -219,13 +220,40 @@ class SearchManager:
         # for i, page in enumerate(pages):
         page_ids = [d[0] for d in doc_scores]
         pages = self.db.read_pages(page_ids)
+        self.page_buffer = pages
 
         time_cost = timer()-start
-        return pages, time_cost
+
+        page_list = [{
+                'ID':page[0],
+                'title':page[1],
+                'content': wash_text(page[2]),
+            } for page in pages]
+
+        time_str = '{:.2f}'.format(time_cost)
+        querys = [query, fuzzy_query]
+        if query == fuzzy_query:
+            querys[1] = None
+        
+        return page_list, time_str, querys
+        
+        # return result_dict
+
+
+        # return pages, time_cost
         # for i, page in enumerate(pages):
         #     print('[ID: {:04d} | Score: {:.4f}] Title: {}'.format(
         #         page[0], doc_scores[i][1], page[1]))
         #     print(f'{wash_text(page[2][:1000])} ...\n')
+
+    def read_page(self, page_id):
+        for page in self.page_buffer:
+            if page[0] == page_id:
+                return {
+                    'title':page[1],
+                    'content': wash_text(page[2]),
+                }
+        raise NotImplementedError(page_id)
 
 
 def read_freq_word():
@@ -242,7 +270,7 @@ def read_freq_word():
 if __name__ == "__main__":
     proc = SearchManager()
 
-    # query = 'go out for experct snacks'
-    query = input('Please input query:\n')
+    query = 'go out for experct snacks'
+    # query = input('Please input query:\n')
     proc.search(query)
 

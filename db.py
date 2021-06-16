@@ -41,8 +41,8 @@ class DBManager:
         self.page_db = page_db
         self.index_db = index_db
     
-        self.index_conn = sqlite3.connect(self.index_db)
-        self.page_conn = sqlite3.connect(self.page_db)
+        self.index_conn = sqlite3.connect(self.index_db, check_same_thread=False)
+        self.page_conn = sqlite3.connect(self.page_db, check_same_thread=False)
         print('Database connected')
 
     def create_table(self):
