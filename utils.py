@@ -35,8 +35,10 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
 
 
 def wash_text(text):
-    out = re.sub(r'(<|{).*(>|})', '', text)
-
+    # out = re.sub(r'(<|{).*(>|})', '', text)
+    cleanr = re.compile('<.*?>')
+    out = re.sub(cleanr, '', text)
+    out = out.replace(" ==", "\n==")
     return out.strip()
 
 
@@ -171,3 +173,7 @@ def remove_puntuation(s):
     # table = string.maketrans("","")
     regex = re.compile('[%s]' % re.escape(string.punctuation))
     return regex.sub('', s)
+
+if __name__ == '__main__':
+    html = '<tile>hi<tile> ==me=='
+    print(wash_text(html))

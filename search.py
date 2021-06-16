@@ -235,7 +235,9 @@ class SearchManager:
         if query == fuzzy_query:
             querys[1] = None
         
-        return page_list, time_str, querys
+        return page_list
+        
+        # return page_list, time_str, querys
         
         # return result_dict
 
