@@ -26,7 +26,7 @@
        
 <div id="search-area" class="jumbotron" style="margin-bottom: 1em">
     <div class="d-flex flex-column align-items-center"> 
-        <div><h5 class="display-3" style="color:white; padding-bottom: 10px;">WIKI SEARCH</h5></div>
+        <div><h4 class="display-3" style="color:white; padding-bottom: 20px;">WIKI SEARCH</h4></div>
         <!-- <div><p class="lead">Lorem ipsum i wanna go all the way around to embrace you</p></div> -->
             <div class="input-group" >
 
@@ -124,28 +124,36 @@
         }
         $('#search-input').val(example_input);
     });
-    function wrap_data(data, type=''){
+    function wrap_data(data, type=1){
         var template;
         if (type==1)
             template='    <div class="card mb-3" style="max-width: 70%;text-align: left;">\n' +
                 '            <h5 class="card-header">{title}{title}<a style="float:right" class="btn btn-outline-primary btn-sm" href="details?id={ID}" target="_blank">read more >></a></h5>\n' +
                 '        <div class="card-body">\n' +
                 '            <p class="card-text">{content}{content}</p>\n' +
+                '            <p class="card-text">'+
+                '           <a  style="color:darkgreen">Contain: {terms} </a> -' +
+                '           <a style="color:indianred"> Document score: {score}</a>'+
+                '           </p> \n' +
                 '        </div>\n' +
                 '    </div>';
         template = template.replace('{ID}', data['ID'])
         template = template.replace(/\{(.+?)}(\{.+?})/g, "<div style='display:inline' data-toggle=\"tooltip\" data-placement=\"left\" title=\"$1\">$2</div>");
-        {#instrument过长内容截断#}
+        // 内容过长截断
         var max_len=500;
         if(data['content'].length>max_len)
             data['content']=data['content'].substr(0,max_len)+"...";
+        // 拼接 terms
+        terms_text = data['terms'][0]
+        for (var key in data['terms']){
+            if (key!=0)
+                terms_text = terms_text + ', ' +  data['terms'][key]
+        }
+        data['terms']=terms_text
+        // 给 template 赋值
         for (var key in data) {
             template = template.replace('{' + key + '}', data[key]==''? '/':data[key])
         }
-        if ('qysler' in data)
-            for (var key in data['qysler'][0]){
-                template=template.replace('{qysler.' + key + '}', data['qysler'][0][key])
-            }
         return template
     }
     $('.search-type').click(function(){
@@ -195,6 +203,7 @@
                     pages=data['pages']
                     time=data['time']
                     querys=data['querys']
+                    n_searched=data['n_searched']
                     if (pages!=null){
                         // 逐个显示信息
                         for( i=0; i<pages.length; i++){
@@ -210,8 +219,8 @@
                         else
                             template = "You may mean <b>" + final_query 
                         
-                        template = template + "</b> ("+ pages.length + " results, " + time + 
-                        "s, sort by <a href='#'' id='sort-btn'>案号</a>)"
+                        template = template + "</b> ( top "+ pages.length + " in " + n_searched +" results, " 
+                        + time + "s, sort by <a href='#'' id='sort-btn'>案号</a>)"
                         $('#sort-line').html(template );
                     }
                     else{
