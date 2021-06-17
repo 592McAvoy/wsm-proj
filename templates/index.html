@@ -1,5 +1,6 @@
 <!-- <!doctype html> -->
 <html lang="en">
+
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -7,11 +8,12 @@
 
     <!-- Bootstrap CSS -->
     {% load static %}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css"
+        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="{% static 'style/mystyle.css' %}" />
     <style>
-        #search-area{
+        #search-area {
             padding-left: 20%;
             padding-right: 20%;
             padding-bottom: 100px;
@@ -22,13 +24,16 @@
     </style>
     <title>a search engine for Wikipedia</title>
 </head>
+
 <body>
-       
-<div id="search-area" class="jumbotron" style="margin-bottom: 1em">
-    <div class="d-flex flex-column align-items-center"> 
-        <div><h5 class="display-3" style="color:white; padding-bottom: 10px;">WIKI SEARCH</h5></div>
-        <!-- <div><p class="lead">Lorem ipsum i wanna go all the way around to embrace you</p></div> -->
-            <div class="input-group" >
+
+    <div id="search-area" class="jumbotron" style="margin-bottom: 1em">
+        <div class="d-flex flex-column align-items-center">
+            <div>
+                <h4 class="display-3" style="color:white; padding-bottom: 20px;">WIKI SEARCH</h4>
+            </div>
+            <!-- <div><p class="lead">Lorem ipsum i wanna go all the way around to embrace you</p></div> -->
+            <div class="input-group">
 
                 <!-- <button style='border-top-right-radius: 0; border-bottom-right-radius: 0;' type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                     <span class="sr-only">Toggle Dropdown</span>
@@ -38,218 +43,228 @@
                     <a class="dropdown-item example-btn" data-num='2' href="#">Example 2</a>
                 </div> -->
                 <div class="input-group-append">
-                    <button type="button" class="btn btn-dark" style='border-top-left-radius: 10px; border-bottom-left-radius: 10px;'>
+                    <button type="button" class="btn btn-dark"
+                        style='border-top-left-radius: 10px; border-bottom-left-radius: 10px;'>
                         <span class="input-group-addon"><span class="fa fa-search"></span></span>
                     </button>
-                    </div>
-                <input id="search-input" type="text" class="form-control" aria-label="Text input with segmented dropdown button">
-            
+                </div>
+                <input id="search-input" type="text" class="form-control"
+                    aria-label="Text input with segmented dropdown button">
+
                 <!-- <button id='data-source-btn' type="button" style='border-radius:0; border: 0' class="btn btn-light">数据源1</button> -->
-            
+
                 <div class="input-group-append">
                     <button id='search-btn' type="button" class="btn btn-dark">
                         Search
                     </button>
-                    <button id='search-dropdown' type="button" class="btn btn-light" style="min-width: 100px;">排序方式1</button>
-                    <button type="button" class="btn btn-light dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" ></button>
-                    <ul class="dropdown-menu dropdown-menu-right" style="min-width:135px" >
-                        <li><a class="dropdown-item search-type" href="#">排序方式1</a></li>
-                        <li><a class="dropdown-item search-type" href="#">排序方式2</a></li>
-                        <li><a class="dropdown-item search-type" href="#">排序方式3</a></li>
-                        <li><a class="dropdown-item search-type" href="#">排序方式4</a></li>
-                        <li><a class="dropdown-item search-type" href="#">排序方式5</a></li>
+                    <button id='search-dropdown' type="button" class="btn btn-light"
+                        style="min-width: 9em;">TF-IDF</button>
+                    <button type="button" class="btn btn-light dropdown-toggle" data-toggle="dropdown"
+                        aria-haspopup="true" aria-expanded="false"></button>
+                    <ul class="dropdown-menu dropdown-menu-right" style="min-width:135px">
+                        <li><a class="dropdown-item search-type" href="#">TF-IDF</a></li>
+                        <li><a class="dropdown-item search-type" href="#">Cos Similarity</a></li>
+                        <li><a class="dropdown-item search-type" href="#">Entropy IDF</a></li>
+                        <li><a class="dropdown-item search-type" href="#">Fast Cos</a></li>
+                        <li><a class="dropdown-item search-type" href="#">Weighted Zone</a></li>
                     </ul>
                 </div>
             </div>
+        </div>
     </div>
-</div>
 
-{% csrf_token %}
-<div id='sort-line' style="padding-right:2%; margin-bottom:1em; display: none ;text-align: right;">
-    sort by<a href="#" id="sort-btn">tf-idf</a>
-</div>
-<center>
-    <div id="display-area"></div>
-</center>
-
-
-<div class="fixed_div">
-    <a id="gotop" href="#" onclick="goTop();return false;">
-        <button type="button" class="btn btn-default" style="font-size: 20px">
-            <span class="glyphicon glyphicon-arrow-up">Top</span>
-        </button>
-    </a>
-</div>
+    {% csrf_token %}
+    <div id='sort-line' style="padding-right:2%; margin-bottom:1em; display: none ;text-align: right;">
+        sort by<a href="#" id="sort-btn">tf-idf</a>
+    </div>
+    <center>
+        <div id="display-area"></div>
+    </center>
 
 
-<!-- Optional JavaScript -->
-<!-- jQuery first, then Popper.js, then Bootstrap JS -->
-{#<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>#}
-<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
-<script src="https://use.fontawesome.com/b29d482d13.js"></script>
-<script type="text/javascript" src="/static/javascript/index.js"></script>
-<script>
-    $('.example-btn').click(function(){
-        // var search_type=$('#search-btn').html();
-        var search_type=$('#search-dropdown').html();
-        var example_input='';
-        var example_num=$(this).attr('data-num');
-        if (search_type=="搜案件"){
-            var data_source_text=$('#data-source-btn').text();
-            if(data_source_text=='数据源1') {
+    <div class="fixed_div">
+        <a id="gotop" href="#" onclick="goTop();return false;">
+            <button type="button" class="btn btn-default" style="font-size: 20px">
+                <span class="glyphicon glyphicon-arrow-up">Top</span>
+            </button>
+        </a>
+    </div>
+
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js"
+        integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
+        crossorigin="anonymous"></script>
+    <script src="https://use.fontawesome.com/b29d482d13.js"></script>
+    <script type="text/javascript" src="/static/javascript/index.js"></script>
+    <script>
+        $('.example-btn').click(function () {
+            // var search_type=$('#search-btn').html();
+            var search_type = $('#search-dropdown').html();
+            var example_input = '';
+            var example_num = $(this).attr('data-num');
+            if (search_type == "搜案件") {
+                var data_source_text = $('#data-source-btn').text();
+                if (data_source_text == '数据源1') {
+                    if (example_num == '1') {
+                        example_input = '小明（person name） AND 上海（city）'
+                    }
+                    if (example_num == '2') {
+                        example_input = '小明（person name） AND NOT 上海（city）'
+                    }
+                } else {
+                    if (example_num == '1') {
+                        example_input = '小明（person name） AND 上海（city） AND 上海徐汇人民法院（court name）'
+                    }
+                    if (example_num == '2') {
+                        example_input = '小明（person name） AND NOT 上海（city） AND (2017)沪0112执5984号'
+                    }
+                }
+            }
+            else {
                 if (example_num == '1') {
-                    example_input = '小明（person name） AND 上海（city）'
+                    example_input = '该合同系双方真实意思表示，被告没有利用强势地位强行与原告签订合同。'
                 }
                 if (example_num == '2') {
-                    example_input = '小明（person name） AND NOT 上海（city）'
-                }
-            }else{
-                if (example_num=='1'){
-                example_input='小明（person name） AND 上海（city） AND 上海徐汇人民法院（court name）'
-                }
-                if(example_num=='2'){
-                    example_input='小明（person name） AND NOT 上海（city） AND (2017)沪0112执5984号'
+                    example_input = '该合同并非双方真实意思表示，被告确系利用强势地位强行与原告签订合同。'
                 }
             }
-        }
-        else{
-            if (example_num=='1'){
-                example_input='该合同系双方真实意思表示，被告没有利用强势地位强行与原告签订合同。'
-            }
-            if(example_num=='2'){
-                example_input='该合同并非双方真实意思表示，被告确系利用强势地位强行与原告签订合同。'
-            }
-        }
-        $('#search-input').val(example_input);
-    });
-    function wrap_data(data, type=''){
-        var template;
-        if (type==1)
-            template='    <div class="card mb-3" style="max-width: 70%;text-align: left;">\n' +
+            $('#search-input').val(example_input);
+        });
+        function wrap_data(data, type = 1) {
+            var template;
+            template = '    <div class="card mb-3" style="max-width: 70%;text-align: left;">\n' +
                 '            <h5 class="card-header">{title}{title}<a style="float:right" class="btn btn-outline-primary btn-sm" href="details?id={ID}" target="_blank">read more >></a></h5>\n' +
                 '        <div class="card-body">\n' +
                 '            <p class="card-text">{content}{content}</p>\n' +
+                '            <p class="card-text">' +
+                '           <a  style="color:darkgreen">Contain: {terms} </a> -' +
+                '           <a style="color:indianred"> Document score: {score}</a>' +
+                '           </p> \n' +
                 '        </div>\n' +
                 '    </div>';
-        template = template.replace('{ID}', data['ID'])
-        template = template.replace(/\{(.+?)}(\{.+?})/g, "<div style='display:inline' data-toggle=\"tooltip\" data-placement=\"left\" title=\"$1\">$2</div>");
-        {#instrument过长内容截断#}
-        var max_len=500;
-        if(data['content'].length>max_len)
-            data['content']=data['content'].substr(0,max_len)+"...";
-        for (var key in data) {
-            template = template.replace('{' + key + '}', data[key]==''? '/':data[key])
-        }
-        if ('qysler' in data)
-            for (var key in data['qysler'][0]){
-                template=template.replace('{qysler.' + key + '}', data['qysler'][0][key])
+            template = template.replace("{ID}", data['ID'])
+            template = template.replace(/\{(.+?)}(\{.+?})/g, "<div style='display:inline' data-toggle=\"tooltip\" data-placement=\"left\" title=\"$1\">$2</div>");
+            // 内容过长截断
+            var max_len = 500;
+            if (data['content'].length > max_len)
+                data['content'] = data['content'].substr(0, max_len) + "...";
+            // 拼接 terms
+            terms_text = data['terms'][0]
+            for (var key in data['terms']) {
+                if (key != 0)
+                    terms_text = terms_text + ', ' + data['terms'][key]
             }
-        return template
-    }
-    $('.search-type').click(function(){
-        $('#search-dropdown').html($(this).html());
-        {#change data source btn#}
-        var search_type=$(this).text();
-        if (search_type=='搜文书') {
-            $('#data-source-btn').css('display', 'none')
+            data['terms'] = terms_text
+            // 给 template 赋值
+            for (var key in data) {
+                template = template.replace('{' + key + '}', data[key] == '' ? '/' : data[key])
+            }
+            return template
         }
-        else{
-            $('#data-source-btn').css('display', '')
-        }
-    });
-    var type;
-    $('#search-btn').click(function(){
-        // var search_type=$(this).text();
-        var search_type=$('#search-dropdown').html();
-        console.log(search_type)
-        {#do search#}
-        var query_text=$('#search-input').val();
-        // var data_source_text=$('#data-source-btn').text();
-        // var dic={'数据源1':'judge','数据源2':'case'};
-        {#var type;#}
-        if (search_type=='排序方式1')
-            type=1;
-        else if (search_type=='排序方式2')
-            type=2;
-        else if (search_type=='排序方式3')
-            type=3;
-        else if (search_type=='排序方式4')
-            type=4;
-        else if (search_type=='排序方式5')
-            type=5;
-        if (query_text.trim()!=''){
+        $('.search-type').click(function () {
+            $('#search-dropdown').html($(this).html());
+            var search_type = $(this).text();
+            if (search_type == '搜文书') {
+                $('#data-source-btn').css('display', 'none')
+            }
+            else {
+                $('#data-source-btn').css('display', '')
+            }
+        });
+        $('#search-btn').click(function () {
+            // var search_type=$(this).text();
+            var search_type = $('#search-dropdown').html();
+            console.log(search_type)
+            var query_text = $('#search-input').val();
+            if (search_type == 'TF-IDF')
+                search_type = 1;
+            else if (search_type == 'Cos Similarity')
+                search_type = 2;
+            else if (search_type == 'Entropy IDF')
+                search_type = 3;
+            else if (search_type == 'Fast Cos')
+                search_type = 4;
+            else if (search_type == 'Weighted Zone')
+                search_type = 5;
+            if (query_text.trim() != '') {
+                $.ajax({
+                    url: '/search',
+                    type: 'post',
+                    data: {
+                        csrfmiddlewaretoken: $("[name='csrfmiddlewaretoken']").val(),
+                        query: query_text,
+                        type: search_type
+                    },
+                    success: function (data) {
+                        $("#display-area").html('');
+                        data = $.parseJSON(data);
+                        console.log(data)
+                        pages = data['pages']
+                        time = data['time']
+                        querys = data['querys']
+                        n_searched = data['n_searched']
+                        if (pages != null) {
+                            // 逐个显示信息
+                            for (i = 0; i < pages.length; i++) {
+                                $("#display-area").append(wrap_data(pages[i], search_type))
+                            }
+                            $('[data-toggle="tooltip"]').tooltip()
+                            // 显示搜索的信息
+                            final_query = querys[0]
+                            if (querys[1] != null)
+                                final_query = querys[1]
+                            if (final_query == query_text)
+                                template = "The query is <b>" + final_query
+                            else
+                                template = "You may mean <b>" + final_query
+
+                            template = template + "</b> ( top " + pages.length + " in " + n_searched + " results, "
+                                + time + "s, sort by <a href='#'' id='sort-btn'>案号</a>)"
+                            $('#sort-line').html(template);
+                        }
+                        else {
+                            $('#sort-line').html('No valid input. Please search another input.');
+                        }
+                        $('#sort-line').css("display", "");
+                    }
+                })
+            }
+        });
+        $(function () {
+            $('[data-toggle="tooltip"]').tooltip()
+        });
+        // $('#data-source-btn').click(function(){
+        //     var cur=$(this).text();
+        //     if (cur=='数据源1'){
+        //         $('#data-source-btn').text('数据源2');
+        //     }
+        //     else
+        //         $('#data-source-btn').text('数据源1');
+        // });
+        $('#sort-btn').click(function () {
             $.ajax({
-                url: '/search',
+                url: '/sort',
                 type: 'post',
                 data: {
                     csrfmiddlewaretoken: $("[name='csrfmiddlewaretoken']").val(),
-                    query: query_text,
-                    type: type
                 },
                 success: function (data) {
                     $("#display-area").html('');
-                    data=$.parseJSON(data);
-                    console.log(data)
-                    pages=data['pages']
-                    time=data['time']
-                    querys=data['querys']
-                    if (pages!=null){
-                        // 逐个显示信息
-                        for( i=0; i<pages.length; i++){
-                            $("#display-area").append(wrap_data(pages[i],type))
-                        }
-                        $('[data-toggle="tooltip"]').tooltip()
-                        // 显示搜索的信息
-                        final_query = querys[0]
-                        if(querys[1]!=null)
-                            final_query = querys[1]
-                        if (final_query==query_text)
-                            template = "The query is <b>" + final_query 
-                        else
-                            template = "You may mean <b>" + final_query 
-                        
-                        template = template + "</b> ("+ pages.length + " results, " + time + 
-                        "s, sort by <a href='#'' id='sort-btn'>案号</a>)"
-                        $('#sort-line').html(template );
+                    data = $.parseJSON(data);
+                    for (i = 0; i < data.length; i++) {
+                        $("#display-area").append(wrap_data(data[i], type))
                     }
-                    else{
-                        $('#sort-line').html('No valid input. Please search another input.');
-                    }
-                    $('#sort-line').css("display","");
+                    $('[data-toggle="tooltip"]').tooltip()
                 }
             })
-        }
-    });
-    $(function () {
-        $('[data-toggle="tooltip"]').tooltip()
-    });
-    // $('#data-source-btn').click(function(){
-    //     var cur=$(this).text();
-    //     if (cur=='数据源1'){
-    //         $('#data-source-btn').text('数据源2');
-    //     }
-    //     else
-    //         $('#data-source-btn').text('数据源1');
-    // });
-    $('#sort-btn').click(function(){
-        $.ajax({
-            url: '/sort',
-            type: 'post',
-            data: {
-                csrfmiddlewaretoken: $("[name='csrfmiddlewaretoken']").val(),
-            },
-            success: function (data) {
-                $("#display-area").html('');
-                data=$.parseJSON(data);
-                for( i=0; i<data.length; i++){
-                    $("#display-area").append(wrap_data(data[i],type))
-                }
-                $('[data-toggle="tooltip"]').tooltip()
-            }
-        })
-    });
-</script>
+        });
+    </script>
 </body>
+
 </html>
