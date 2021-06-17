@@ -20,7 +20,7 @@ def main():
     # print(db.check_term_size(15))
     
     # print(f'Terms size: {db.get_vocabs_size()}')
-    
+
 
 
 if __name__ == "__main__":

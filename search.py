@@ -7,16 +7,17 @@ from multiprocessing import Pool
 from timeit import default_timer as timer
 import enchant
 from fnmatch import fnmatch
-from utils import extract_terms_from_sentence, wash_text, cosine_similarity, \
-    split, cal_norm_tf_idf, extarct_id_tf, merge_scores, remove_puntuation
+from utils import extract_terms_from_sentence, wash_text, cosine_similarity, split, \
+    cal_norm_tf_idf, extarct_id_tf, merge_scores, fast_cosine_similarity, weighted_zone, \
+    cal_entropy_tf_f, cal_tf_idf, remove_puntuation
 import itertools
 
 
-def process_term_posting(packed_params, total_pages=11650115):
+def process_term_posting(packed_params, total_pages=21229916, rank_mode=1):
     """
-    Calculate normed query tf-idf and doc tf-idf for term 
+    Calculate normed query tf-idf and doc tf-idf for term
 
-    Args: 
+    Args:
         posting (tuple): (term, docs)
         tf_query (list): list of term frequency in query
         total_pages (int): the amount of pages
@@ -37,7 +38,7 @@ def process_term_posting(packed_params, total_pages=11650115):
         postings, tf_query = packed_params
     # print(postings)
     n_unique_terms = len(postings)
-    query_vec = [0] * n_unique_terms
+    query_vec = [0]*n_unique_terms
 
     doc_vecs = {}
     terms = []
@@ -45,10 +46,18 @@ def process_term_posting(packed_params, total_pages=11650115):
         terms.append(term)
         if len(docs) > 0:
             docid_tf = extarct_id_tf(docs)
-            df = len(docid_tf)
-            query_vec[i] = cal_norm_tf_idf(tf=tf_query[i],
-                                           df=df,
-                                           N_doc=total_pages)
+
+            if rank_mode == 3:  # use entropy to calculate idf
+                df = cal_entropy_tf_f(docid_tf, total_pages)
+            else:
+                df = len(docid_tf)
+
+            if rank_mode == 1:  # use unnormalized tf-idf
+                query_vec[i] = cal_tf_idf(
+                    tf=tf_query[i], df=df, N_doc=total_pages)
+            else:
+                query_vec[i] = cal_norm_tf_idf(
+                    tf=tf_query[i], df=df, N_doc=total_pages)
 
             # sort by tf
             docid_tf = sorted(docid_tf, key=lambda d: d[1], reverse=True)
@@ -65,14 +74,15 @@ def select_term_given_vec(vec, terms):
     for i in range(len(vec)):
         if vec[i] != 0:
             select.append(terms[i])
+    # print(vec, terms, select)
     return select
 
 
 class SearchManager:
     def __init__(self):
-        # self.db = DBManager(page_db=config.demo_page_db,
-        #                     index_db=config.demo_index_db)
-        self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+        self.db = DBManager(page_db=config.demo_page_db,
+                            index_db=config.demo_index_db)
+        # self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
@@ -80,9 +90,7 @@ class SearchManager:
         self.page_buffer = None
         self.querys = None  # 用于detail页面的高亮
 
-        # print(f'Vocab size: {self.db.get_vocabs_size()}')
-        # print(f'Total Docs: {self.db.get_page_size()}')
-        # self.db.create_idx()
+        
 
     def _init_common_word(self):
         with open('data/google-20k.txt', 'r') as fd:
@@ -118,8 +126,8 @@ class SearchManager:
         n_unique = len(postings)
         if not concurrent or n_unique < 2:
             start = timer()
-            query_vec, doc_vecs, terms = process_term_posting(
-                (postings, tf_query))
+            query_vec, doc_vecs = process_term_posting(
+                (postings, tf_query, rank_mode))
             print(f"Sequential process cost {timer()-start} s")
         # exit()
         else:
@@ -135,28 +143,23 @@ class SearchManager:
             pool.join()
             query_vec_list, doc_vecs_list, term_list = zip(*results)
             terms = list(itertools.chain(*term_list))
-            # print(terms)
             query_vec, doc_vecs = merge_scores(query_vec_list, doc_vecs_list,
                                                n_unique)
-            print(f"{n_proc} concurent process total cost {timer()-start} s")
+            
 
         # 2. compute query-doc similarity
         doc_scores = []  # (doc_id, score)
-        print(select_term_given_vec(query_vec, terms))
+        
         for doc_id, doc_vec in doc_vecs.items():
             # calculate cosine similarity
-            if rank_mode == 'cos':
-                doc_scores.append(
-                    (doc_id, cosine_similarity(query_vec, doc_vec), select_term_given_vec(doc_vec, terms)))
-            else:
-                # add new ranking method here
-                raise NotImplementedError(rank_mode)
-
-        # 3. return first N pages (id, score)
+            doc_scores.append((doc_id, cosine_similarity(
+                query_vec, doc_vec), select_term_given_vec(doc_vec, terms),
+                sum(doc_vec), doc_vec))
+        # sort
         doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+
         print(f'Searched for {len(doc_scores)} pages')
 
-        # return doc_scores[:config.max_return_docs]
         return doc_scores
 
     def most_frequent(self, candidates):
@@ -203,16 +206,13 @@ class SearchManager:
                         new_query = new_query.replace(t, word)
                         break
 
-                # print(f'pattern:{t}\t results:{words}')
-                # pick = self.most_frequent(words)
-
         if query != new_query:
             print(f'Search for \'{new_query}\'?')
 
         # self.search(new_query)
         return new_query
 
-    def search(self, query, concurrent=True):
+    def search(self, query, concurrent=True, rank_mode=1):
         """
         wrapper of search logic
 
@@ -235,7 +235,6 @@ class SearchManager:
 
         # exit()
 
-        # pages, doc_scores = self._search(query, concurrent=True)
         doc_scores = self._search(
             query, concurrent=concurrent)  # (id, score, terms)
         if doc_scores is None:
@@ -249,12 +248,54 @@ class SearchManager:
                 doc_scores = sorted(doc_scores,
                                     key=lambda d: d[1],
                                     reverse=True)
-
-        # for i, page in enumerate(pages):
-        page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
+        
+        # remove repeated pages
+        unique_ids = set()
+        unique_doc_scores = []
+        for d in doc_scores:
+            if d[0] not in unique_ids:
+                unique_doc_scores.append(d)
+            if len(unique_doc_scores) == config.max_return_docs:
+                break
+        
+        # sync pages and doc_scores
+        page_ids = [d[0] for d in unique_doc_scores]
         pages = self.db.read_pages(page_ids)
+        sync_doc_scores = []
+        for page in pages:
+            for d in unique_doc_scores:
+                if d[0] == page[0]:
+                    # print((d[0], page[0]))
+                    sync_doc_scores.append(d)
+                    break        
+        doc_scores = sync_doc_scores
 
-        # return
+
+        if rank_mode == 4:
+            doc_fast_cos_scores = []
+            for doc_score, page in zip(doc_scores, pages):
+                doc_fast_cos_scores.append(
+                    (doc_score[0], fast_cosine_similarity(doc_score, page), page))
+
+            doc_scores = sorted(doc_fast_cos_scores,
+                                key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores]
+            pages = [d[2] for d in doc_scores]
+
+        elif rank_mode == 5:  # weighted zone
+            # After sorting the top k documents, using weighted zone ranking to rerank the documents
+            doc_scores = []
+            for id, page in zip(page_ids, pages):
+                doc_scores.append(
+                    (id, weighted_zone(unique_terms, page, config.w_title, config.w_body), page))
+
+            doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores]
+            pages = [d[2] for d in doc_scores]
+
+        
+
+        # return params
 
         time_cost = timer()-start
 
@@ -266,15 +307,23 @@ class SearchManager:
             'terms': doc_scores[i][2]
         } for i, page in enumerate(pages)]
 
-        self.page_buffer = pages
+        self.page_buffer = page_list
 
         time_str = '{:.2f}'.format(time_cost)
 
         n_searched = len(doc_scores)
 
-        # for page in page_list:
-        #     print("Title: {}\tScores: {:.2f}\tTerms:{}".format(
-        #         page['ID'], page['score'], page['terms']))
+        for page in page_list:
+            print("ID: {}\tScores: {:.2f}\tTerms:{}".format(
+                page['ID'], page['score'], page['terms']))
+            to_remove = []
+            for t in page['terms']:
+                if t not in page['content']:
+                    print(f"no {t} in page {page['ID']}")
+                    # page['terms'].remove(t)
+                    to_remove.append(t)
+            for t in to_remove:
+                page['terms'].remove(t)
 
         # print(time_str, querys, n_searched)
 
@@ -283,14 +332,9 @@ class SearchManager:
     def read_page(self, page_id):
         for page in self.page_buffer:
             if page['ID'] == page_id:
-                detail_page = wash_text(page[2])
-                return page # including {'ID', 'title', 'content', 'score', 'terms'}
-                # if self.querys[0] is not None:
-                #     print(self.querys)
-                # return {
-                #     'title': page[1],
-                #     'content': detail_page,
-                # }
+               
+                return page
+                
         raise NotImplementedError(page_id)
 
 
@@ -310,4 +354,8 @@ if __name__ == "__main__":
 
     query = 'go out for experct snacks'
     # query = input('Please input query:\n')
-    proc.search(query)
+    proc.search(query, 2)
+
+    row = proc.db.read_postings(['snack', 'expert'])
+    # print(row)
+    # assert('45' in row[0][1])

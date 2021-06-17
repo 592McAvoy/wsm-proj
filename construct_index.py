@@ -17,7 +17,11 @@ class ReversePostingListConstuctor:
     def __init__(self):
         self.db = DBManager(page_db=config.page_db,
                             index_db=config.index_db)
-        self.db.create_table()
+        
+        # self.db.create_table()
+        print(f'Vocab size: {self.db.get_vocabs_size()}')
+        # print(f'Total Docs: {self.db.get_page_size()}')
+        self.db.create_idx()
         
     def set_file(self, file_path):
         self.file_path = file_path
@@ -90,17 +94,18 @@ if __name__ == "__main__":
     # exit()
     wiki_dir = 'data/wiki/partitions'
     parts = sorted(os.listdir(wiki_dir))
-    # current = 'p20460153p20570392'
+    current = 'p15824603p17324602'
     proc = ReversePostingListConstuctor()
+    
     # exit()
     for part in parts:
         if 'test' in part:
             continue
-        # if current is not None:
-        #     if current not in part:
-        #         continue
-        #     else:
-        #         current = None
+        if current is not None:
+            if current not in part:
+                continue
+            else:
+                current = None
         
         fn = os.path.join(wiki_dir, part)
         proc.set_file(fn)
