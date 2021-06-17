@@ -136,7 +136,7 @@ def merge_scores(query_vec_list, doc_vecs_list, n_unique):
         for j, s in enumerate(q_vec):
             query_vec[i+j] = s
         i += len(q_vec)
-    assert(i == n_unique)
+    # assert(i == n_unique)
 
     doc_vecs = {}
     i = 0
@@ -174,3 +174,7 @@ def remove_puntuation(s):
     # table = string.maketrans("","")
     regex = re.compile('[%s]' % re.escape(string.punctuation))
     return regex.sub('', s)
+
+if __name__ == '__main__':
+    html = '<tile>hi<tile> ==me=='
+    print(wash_text(html))

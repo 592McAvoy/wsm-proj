@@ -6,4 +6,4 @@ index_db='data/db/index.db'
 
 # search hyper params
 max_docs_per_term = 1000
-max_return_docs = 10 # make sure max_docs_per_term >> max_return_docs
+max_return_docs = 20 # make sure max_docs_per_term >> max_return_docs
