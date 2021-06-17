@@ -176,6 +176,7 @@ class DBManager:
         cursor = c.execute(query_str, list(terms))
 
         rec = cursor.fetchall()
+        # print(rec)
 
         # conn.close()
         return rec

@@ -136,7 +136,7 @@ def merge_scores(query_vec_list, doc_vecs_list, n_unique):
         for j, s in enumerate(q_vec):
             query_vec[i+j] = s
         i += len(q_vec)
-    assert(i == n_unique)
+    # assert(i == n_unique)
 
     doc_vecs = {}
     i = 0

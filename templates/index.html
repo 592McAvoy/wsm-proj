@@ -1,4 +1,4 @@
-<!doctype html>
+<!-- <!doctype html> -->
 <html lang="en">
 <head>
     <!-- Required meta tags -->
@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
+    {% load static %}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link rel="stylesheet" href="{% static 'style/mystyle.css' %}" />
     <style>
         #search-area{
             padding-left: 20%;
@@ -48,7 +50,6 @@
             <a class="dropdown-item search-type" href="#">按排序方式5搜索</a>
         </div>
     </div>
-
 
 </div>
 
@@ -111,12 +112,23 @@
 {#    </div>#}
 </center>
 
+
+<div class="fixed_div">
+    <a id="gotop" href="#" onclick="goTop();return false;">
+        <button type="button" class="btn btn-default" style="font-size: 20px">
+            <span class="glyphicon glyphicon-arrow-up">Top</span>
+        </button>
+    </a>
+</div>
+
 <!-- Optional JavaScript -->
 <!-- jQuery first, then Popper.js, then Bootstrap JS -->
 {#<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script>#}
 <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.0/dist/js/bootstrap.min.js" integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI" crossorigin="anonymous"></script>
+<script type="text/javascript" src="/static/javascript/index.js"></script>
 <script>
     $('.example-btn').click(function(){
         var search_type=$('#search-btn').html();
@@ -156,47 +168,8 @@
             template='    <div class="card bg-light mb-3" style="max-width: 80%;text-align: left;">\n' +
                 '        {#  <div class="card-header">Header</div>#}\n' +
                 '        <div class="card-body">\n' +
-                // '            <div class="float-right">{承办部门}{承办部门} {级别}{级别} {文书类别}{文书类别}</div>\n' +
                 '            <h5 class="card-title"><a href="details?id={ID}" target="_blank">{title}{title}</a></h5>\n' +
-                // '            <p class="card-text">{案由}{案由} | {案号}{案号} | {结案日期}{结案日期}</p>\n' +
                 '            <p class="card-text">{content}{content}</p>\n' +
-                '        </div>\n' +
-                '    </div>';
-        else if (type=='judge') {
-            if (data['qysler'].length > 0) {
-                template = "    <div class=\"card bg-light mb-3\" style=\"max-width: 80%;text-align: left;\">\n" +
-                    "        <div class=\"card-body\">\n" +
-                    "            {#            <div class=\"float-right\">民事 一审 判决</div>#}\n" +
-                    "            <h5 class=\"card-title\">{案号}{caseCode}</h5>\n" +
-                    "            <p class=\"card-text\">{省份}{areaName} {执行法院}{courtName} {执行依据文号}{gistId} {做出执行依据单位}{gistUnit}</p>\n" +
-                    "            <p class=\"card-text\">{被执行人姓名或名称}{iname} {法人}{businessEntity} {人员与公司关系}{qysler.corporationtypename} {人员姓名}{qysler.iname} {人员身份证号码}{qysler.cardNum} {性别}{sexy} {年龄}{age}岁 {身份证号或组织机构代码}{cardNum}</p>\n" +
-                    "            <p class=\"card-text\">{生效法律文书确定的义务}{duty}</p>\n" +
-                    "            <p class=\"card-text\">{被执行人履行情况}{performance}[{履行部分}{performedPart}/{未履行部分}{unperformPart}] {被执行人行为具体情形}{disruptTypeName}</p>\n" +
-                    "            <p class=\"card-text\">{立案时间}{regDate}~{发布时间}{publishDate}</p>\n" +
-                    "        </div>\n" +
-                    "    </div>";
-
-            } else {
-                template = "    <div class=\"card bg-light mb-3\" style=\"max-width: 80%;text-align: left;\">\n" +
-                    "        <div class=\"card-body\">\n" +
-                    "            {#            <div class=\"float-right\">民事 一审 判决</div>#}\n" +
-                    "            <h5 class=\"card-title\">{案号}{caseCode}</h5>\n" +
-                    "            <p class=\"card-text\">{省份}{areaName} {执行法院}{courtName} {执行依据文号}{gistId} {做出执行依据单位}{gistUnit}</p>\n" +
-                    "            <p class=\"card-text\">{被执行人姓名或名称}{iname} {性别}{sexy} {年龄}{age} {身份证号或组织机构代码}{cardNum}</p>\n" +
-                    "            <p class=\"card-text\">{生效法律文书确定的义务}{duty}</p>\n" +
-                    "            <p class=\"card-text\">{被执行人履行情况}{performance}[{履行部分}{performedPart}/{未履行部分}{unperformPart}] {被执行人行为具体情形}{disruptTypeName}</p>\n" +
-                    "            <p class=\"card-text\">{立案时间}{regDate}~{发布时间}{publishDate}</p>\n" +
-                    "        </div>\n" +
-                    "    </div>";
-            }
-        }
-        else
-            template='    <div class="card bg-light mb-3" style="max-width: 80%;text-align: left;">\n' +
-                '        <div class="card-body">\n' +
-                '            {#            <div class="float-right">民事 一审 判决</div>#}\n' +
-                '            <h5 class="card-title">{案号}{案号}</h5>\n' +
-                '            <p class="card-text">{申请执行人}{申请执行人}/{被执行人}{被执行人} {被执行人地址}{被执行人地址} {执行标的金额}{执行标的金额（元）}元</p>\n' +
-                '            <p class="card-text">{承办法院、联系电话}{承办法院、联系电话}</p>\n' +
                 '        </div>\n' +
                 '    </div>';
         template = template.replace('{ID}', data['ID'])
@@ -244,7 +217,6 @@
         else if (search_type=='按排序方式5搜索')
             type=5;
         if (query_text.trim()!=''){
-            $('#sort-line').css("display","");
             $.ajax({
                 url: '/search',
                 type: 'post',
@@ -260,12 +232,30 @@
                     pages=data['pages']
                     time=data['time']
                     querys=data['querys']
-                    console.log(querys)
-                    for( i=0; i<pages.length; i++){
-                        console.log(pages[i])
-                        $("#display-area").append(wrap_data(pages[i],type))
+                    if (pages!=null){
+                        // 逐个显示信息
+                        for( i=0; i<pages.length; i++){
+                            $("#display-area").append(wrap_data(pages[i],type))
+                        }
+                        $('[data-toggle="tooltip"]').tooltip()
+                        // 显示搜索的信息
+                        final_query = querys[0]
+                        if(querys[1]!=null)
+                            final_query = querys[1]
+                        if (final_query==query_text)
+                            template = "The query is \"" + final_query 
+                        else
+                            template = "You may mean \"" + final_query 
+                        
+                        template = template + "\". Find "+ pages.length + " results." 
+                                   + " Cost " + time + " seconds." 
+                                   + ' Sort by <a href="#" id="sort-btn">案号</a>.'
+                        $('#sort-line').html(template );
                     }
-                    $('[data-toggle="tooltip"]').tooltip()
+                    else{
+                        $('#sort-line').html('No valid input. Please search another input.');
+                    }
+                    $('#sort-line').css("display","");
                 }
             })
         }
