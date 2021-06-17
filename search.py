@@ -274,8 +274,8 @@ class SearchManager:
                 doc_fast_cos_scores.append((doc_score[0], fast_cosine_similarity(doc_score, page), doc_score[2], page))
 
             doc_scores = sorted(doc_fast_cos_scores, key=lambda d: d[1], reverse=True)
-            page_ids = [d[0] for d in doc_scores]
-            pages = [d[3] for d in doc_scores]
+            page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
+            pages = [d[3] for d in doc_scores[:config.max_return_docs]]
             #print("after", len(pages))
 
         elif rank_mode == 5:# weighted zone
@@ -286,11 +286,12 @@ class SearchManager:
                 doc_weighted_scores.append((doc_score[0], weighted_zone(unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
 
             doc_scores = sorted(doc_weighted_scores, key=lambda d: d[1], reverse=True)
-            page_ids = [d[0] for d in doc_scores]
-            pages = [d[3] for d in doc_scores]
-        elif rank_mode == 2:
-            print("Using cosine to rank")
-
+            page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
+            pages = [d[3] for d in doc_scores[:config.max_return_docs]]
+        else:
+            page_ids = page_ids[:config.max_return_docs]
+            pages = pages[:config.max_return_docs]
+        #print("pages:", pages)
         # return
 
         time_cost = timer()-start
@@ -316,6 +317,7 @@ class SearchManager:
         #         page['ID'], page['score'], page['terms']))
 
         # print(time_str, querys, n_searched)
+        #print("top k", len(page_list), n_searched)
 
         return page_list, time_str, querys, n_searched
 
@@ -355,4 +357,4 @@ if __name__ == "__main__":
     # mode 4: fast cosine
     # mode 5: weighted zone
 
-    proc.search(query, rank_mode = 1)
+    proc.search(query, rank_mode = 5)
