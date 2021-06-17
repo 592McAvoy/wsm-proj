@@ -17,7 +17,8 @@ def details(request):
     page = proc.read_page(id)
     for terms in page['terms']:
         print(terms)
-        page['content'] = page['content'].replace(f"{terms}", f"<font color='red'><b>{terms}</b></font>")
+        page['content'] = page['content'].replace(
+            f"{terms}", f"<font color='red'><b>{terms}</b></font>")
     para = {'id': id, 'title': page['title'], 'content': page['content']}
     return render(request, 'details.html', para)
 
@@ -27,9 +28,14 @@ def search(request):
     print('search_type:', search_type)
     query = request.POST['query'].strip()
     print(query)
-    page_list, time_str, querys, n_searched = proc.search(query)
+    page_list, time_str, querys, n_searched = proc.search(query, rank_mode=search_type)
 
-    para = {'pages': page_list, 'time': time_str, 'querys': querys, 'n_searched': n_searched}
+    para = {
+        'pages': page_list,
+        'time': time_str,
+        'querys': querys,
+        'n_searched': n_searched
+    }
     result_json = json.dumps(para)
     return HttpResponse(result_json)
 
