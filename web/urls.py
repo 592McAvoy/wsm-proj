@@ -6,7 +6,6 @@ urlpatterns = [
     path('',views.index),
     path('details',views.details),
     path('search',views.search),
-    path('sort',views.sort)
 ]
 
 
