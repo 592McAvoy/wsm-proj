@@ -109,7 +109,7 @@ def split(a, n):
 
 def fast_cosine_similarity(doc_score, page):
     "need to divide the length of document"
-    wtf = doc_score[2]
+    wtf = doc_score[3]
     return wtf/(len(page[1].split()) + len(page[2].split()))
 
 
@@ -169,7 +169,7 @@ def merge_scores(query_vec_list, doc_vecs_list, n_unique):
         for j, s in enumerate(q_vec):
             query_vec[i+j] = s
         i += len(q_vec)
-    assert(i == n_unique)
+    # assert(i == n_unique)
 
     doc_vecs = {}
     i = 0
@@ -203,7 +203,13 @@ def extarct_id_tf(docs):
     return ret
 
 import string
+
 def remove_puntuation(s):
     # table = string.maketrans("","")
     regex = re.compile('[%s]' % re.escape(string.punctuation))
     return regex.sub('', s)
+
+if __name__ == '__main__':
+    html = '<tile>hi<tile> ==me=='
+    print(wash_text(html))
+
