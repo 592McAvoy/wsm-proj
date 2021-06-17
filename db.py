@@ -73,11 +73,11 @@ class DBManager:
             conn.commit()
             conn.close()
 
-            conn = sqlite3.connect(self.page_db)
-            c = conn.cursor()
-            c.execute(''' CREATE INDEX doc_index ON pages (id)''')
-            conn.commit()
-            conn.close()
+            # conn = sqlite3.connect(self.page_db)
+            # c = conn.cursor()
+            # c.execute(''' CREATE INDEX doc_index ON pages (id)''')
+            # conn.commit()
+            # conn.close()
         except:
             print('index existed')
         else:
@@ -141,7 +141,7 @@ class DBManager:
         return rec
 
     def exist_page(self, iid):
-        # conn = sqlite3.connect(self.page_db)
+        conn = sqlite3.connect(self.page_db)
         conn = self.page_conn
         c = conn.cursor()
 

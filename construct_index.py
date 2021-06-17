@@ -14,12 +14,13 @@ import itertools
 
 
 class ReversePostingListConstuctor:
-    def __init__(self, file_path):
-        self.file_path = file_path
+    def __init__(self):
         self.db = DBManager(page_db=config.page_db,
                             index_db=config.index_db)
         self.db.create_table()
         
+    def set_file(self, file_path):
+        self.file_path = file_path
 
     def run(self, DEBUG=True, concurrent=False):
         start = timer()
@@ -89,15 +90,20 @@ if __name__ == "__main__":
     # exit()
     wiki_dir = 'data/wiki/partitions'
     parts = sorted(os.listdir(wiki_dir))
-    current = 'p20460153p20570392'
+    # current = 'p20460153p20570392'
+    proc = ReversePostingListConstuctor()
+    # exit()
     for part in parts:
-        if current is not None:
-            if current not in part:
-                continue
-            else:
-                current = None
+        if 'test' in part:
+            continue
+        # if current is not None:
+        #     if current not in part:
+        #         continue
+        #     else:
+        #         current = None
         
         fn = os.path.join(wiki_dir, part)
+        proc.set_file(fn)
         # fn = 'data/wiki/partitions/test.ndjson'
-        proc = ReversePostingListConstuctor(file_path=fn)
+        
         proc.run(DEBUG=False, concurrent=True)

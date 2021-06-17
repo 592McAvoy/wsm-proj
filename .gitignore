@@ -135,4 +135,6 @@ data/wiki
 # data/db
 data/db/index.db
 data/db/pages.db
+data/db/index_all.db
+data/db/pages_all.db
 .vscode/
