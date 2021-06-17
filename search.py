@@ -7,7 +7,7 @@ from multiprocessing import Pool
 from timeit import default_timer as timer
 import enchant
 from fnmatch import fnmatch
-from utils import extract_terms_from_sentence, wash_text, cosine_similarity, split, \
+from utils import extract_terms_from_sentence, wash_text, format_text, cosine_similarity, split, \
     cal_norm_tf_idf, extarct_id_tf, merge_scores, fast_cosine_similarity, weighted_zone, \
     cal_entropy_tf_f, cal_tf_idf, remove_puntuation
 import itertools
@@ -217,7 +217,7 @@ class SearchManager:
         # self.search(new_query)
         return new_query
 
-    def search(self, query, rank_mode, concurrent=True):
+    def search(self, query, rank_mode=2, concurrent=True):
         """
         wrapper of search logic
 
@@ -315,7 +315,7 @@ class SearchManager:
         page_list = [{
             'ID': page[0],
             'title':page[1],
-            'content': wash_text(page[2]),
+            'content': format_text(page[2]),
             'score': doc_scores[i][1],
             'terms': doc_scores[i][2]
         } for i, page in enumerate(pages)]
@@ -331,7 +331,7 @@ class SearchManager:
                 page['ID'], page['score'], page['terms']))
             to_remove = []
             for t in page['terms']:
-                if t not in page['content']:
+                if t not in page['content'].lower():
                     print(f"no {t} in page {page['ID']}")
                     # page['terms'].remove(t)
                     to_remove.append(t)
@@ -373,4 +373,4 @@ if __name__ == "__main__":
     # mode 4: fast cosine
     # mode 5: weighted zone
 
-    proc.search(query, rank_mode=3)
+    proc.search(query)
