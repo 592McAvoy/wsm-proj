@@ -269,18 +269,18 @@ class SearchManager:
 
             doc_scores = sorted(doc_fast_cos_scores, key=lambda d: d[1], reverse=True)
             page_ids = [d[0] for d in doc_scores]
-            pages = [d[2] for d in doc_scores]
+            pages = [d[3] for d in doc_scores]
 
         elif rank_mode == 5:# weighted zone
             print("Using weighted zone to rank")
             # After sorting the top k documents, using weighted zone ranking to rerank the documents
-            doc_scores = []
+            doc_weighted_scores = []
             for doc_score, id, page in zip(doc_scores, page_ids, pages):
-                doc_scores.append((id, weighted_zone(unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
+                doc_weighted_scores.append((id, weighted_zone(unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
 
-            doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+            doc_scores = sorted(doc_weighted_scores, key=lambda d: d[1], reverse=True)
             page_ids = [d[0] for d in doc_scores]
-            pages = [d[2] for d in doc_scores]
+            pages = [d[3] for d in doc_scores]
         elif rank_mode == 2:
             print("Using cosine to rank")
 
@@ -290,6 +290,8 @@ class SearchManager:
 
         time_cost = timer()-start
 
+        #print("pages", pages)
+        #print("score", doc_scores)
         page_list = [{
             'ID': page[0],
             'title':page[1],
@@ -348,4 +350,4 @@ if __name__ == "__main__":
     # mode 4: fast cosine
     # mode 5: weighted zone
 
-    proc.search(query, rank_mode=1)
+    proc.search(query, rank_mode=3)
