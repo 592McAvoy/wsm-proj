@@ -69,7 +69,11 @@ def process_term_posting(packed_params, total_pages=21229916, rank_mode=1):
             for doc_id, tf in docid_tf[:config.max_docs_per_term]:
                 if doc_id not in doc_vecs.keys():
                     doc_vecs[doc_id] = [0] * n_unique_terms
-                doc_vecs[doc_id][i] = cal_norm_tf_idf(tf, df, total_pages)
+                if rank_mode == 1:
+                    doc_vecs[doc_id][i] = cal_tf_idf(tf, df, total_pages)
+                    #print("compare:", cal_tf_idf(tf, df, total_pages), cal_norm_tf_idf(tf, df, total_pages))
+                else:
+                    doc_vecs[doc_id][i] = cal_norm_tf_idf(tf, df, total_pages)
 
     return query_vec, doc_vecs, terms
 
@@ -165,7 +169,7 @@ class SearchManager:
         print(f'Searched for {len(doc_scores)} pages')
 
         # return doc_scores[:config.max_return_docs]
-        return doc_scores, valid_terms
+        return doc_scores, set(valid_terms)
 
     def most_frequent(self, candidates):
         ret = (candidates[0], -1)
@@ -249,8 +253,8 @@ class SearchManager:
             return None, '', querys, 0
 
         if fuzzy_query != query:
-            doc_scores_fuzzy, unique_terms = self._search(fuzzy_query,
-                                                          concurrent=concurrent, rank_mode=rank_mode)
+            doc_scores_fuzzy, unique_terms_fuzzy = self._search(fuzzy_query, concurrent=concurrent, rank_mode=rank_mode)
+            unique_terms = set.union(unique_terms, unique_terms_fuzzy)
             if doc_scores_fuzzy is not None:
                 doc_scores.extend(doc_scores_fuzzy)
                 doc_scores = sorted(doc_scores,
@@ -285,28 +289,26 @@ class SearchManager:
                 doc_fast_cos_scores.append((doc_score[0],
                                             fast_cosine_similarity(doc_score, page), doc_score[2], page))
 
-            doc_scores = sorted(doc_fast_cos_scores,
-                                key=lambda d: d[1], reverse=True)
-            page_ids = [d[0] for d in doc_scores]
-            pages = [d[3] for d in doc_scores]
+            doc_scores = sorted(doc_fast_cos_scores, key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
+            pages = [d[3] for d in doc_scores[:config.max_return_docs]]
+            #print("after", len(pages))
 
         elif rank_mode == 5:  # weighted zone
             print("Using weighted zone to rank")
             # After sorting the top k documents, using weighted zone ranking to rerank the documents
             doc_weighted_scores = []
-            for doc_score, id, page in zip(doc_scores, page_ids, pages):
-                doc_weighted_scores.append((id, weighted_zone(
-                    unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
+            for doc_score, page in zip(doc_scores, pages):
+                doc_weighted_scores.append((doc_score[0], weighted_zone(unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
 
-            doc_scores = sorted(doc_weighted_scores,
-                                key=lambda d: d[1], reverse=True)
-            page_ids = [d[0] for d in doc_scores]
-            pages = [d[3] for d in doc_scores]
-            
-        elif rank_mode == 2:
-            print("Using cosine to rank")
-
-        # return params
+            doc_scores = sorted(doc_weighted_scores, key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
+            pages = [d[3] for d in doc_scores[:config.max_return_docs]]
+        else:
+            page_ids = page_ids[:config.max_return_docs]
+            pages = pages[:config.max_return_docs]
+        #print("pages:", pages)
+        # return
 
         time_cost = timer()-start
 
@@ -316,7 +318,7 @@ class SearchManager:
             'ID': page[0],
             'title':page[1],
             'content': format_text(page[2]),
-            'score': doc_scores[i][1],
+            'score': '{:.4f}'.format(doc_scores[i][1]),
             'terms': doc_scores[i][2]
         } for i, page in enumerate(pages)]
 
@@ -327,7 +329,7 @@ class SearchManager:
         n_searched = len(doc_scores)
 
         for page in page_list:
-            print("ID: {}\tScores: {:.2f}\tTerms:{}".format(
+            print("ID: {}\tScores: {}\tTerms:{}".format(
                 page['ID'], page['score'], page['terms']))
             to_remove = []
             for t in page['terms']:
@@ -339,6 +341,7 @@ class SearchManager:
                 page['terms'].remove(t)
 
         # print(time_str, querys, n_searched)
+        #print("top k", len(page_list), n_searched)
 
         return page_list, time_str, querys, n_searched
 
@@ -365,7 +368,7 @@ def read_freq_word():
 if __name__ == "__main__":
     proc = SearchManager()
 
-    query = 'go out for experct snacks'
+    query = 'go go out for experct snacks'
     # query = input('Please input query:\n')
     # mode 1: tf-idf
     # mode 2: cosine sim
@@ -373,4 +376,4 @@ if __name__ == "__main__":
     # mode 4: fast cosine
     # mode 5: weighted zone
 
-    proc.search(query)
+    proc.search(query, rank_mode = 5)

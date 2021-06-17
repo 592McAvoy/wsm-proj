@@ -16,7 +16,10 @@ def details(request):
     print('id is ', id)
     page = proc.read_page(id)
     for terms in page['terms']:
-        print(terms)
+        page['content'] = page['content'].replace(
+            f"{terms}", f"<font color='red'><b>{terms}</b></font>")
+        # 首字母大写
+        terms = terms.capitalize()
         page['content'] = page['content'].replace(
             f"{terms}", f"<font color='red'><b>{terms}</b></font>")
     para = {'id': id, 'title': page['title'], 'content': page['content']}
@@ -28,7 +31,8 @@ def search(request):
     print('search_type:', search_type)
     query = request.POST['query'].strip()
     print(query)
-    page_list, time_str, querys, n_searched = proc.search(query, rank_mode=search_type)
+    page_list, time_str, querys, n_searched = proc.search(
+        query, rank_mode=search_type)
 
     para = {
         'pages': page_list,
