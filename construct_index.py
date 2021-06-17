@@ -19,9 +19,10 @@ class ReversePostingListConstuctor:
                             index_db=config.index_db)
         
         # self.db.create_table()
-        # print(f'Vocab size: {self.db.get_vocabs_size()}')
-        # print(f'Total Docs: {self.db.get_page_size()}')
-        # self.db.create_idx()
+        self.db.create_idx()
+        print(f'Vocab size: {self.db.get_vocabs_size()}')
+        print(f'Total Docs: {self.db.get_page_size()}')
+       
         
     def set_file(self, file_path):
         self.file_path = file_path
@@ -97,7 +98,7 @@ if __name__ == "__main__":
     current = 'p15824603p17324602'
     proc = ReversePostingListConstuctor()
     
-    # exit()
+    exit()
     for part in parts:
         if 'test' in part:
             continue

@@ -6,8 +6,8 @@ index_db='data/db/index_all.db'
 
 # search hyper params
 max_docs_per_term = 100
-max_return_docs = 5 # make sure max_docs_per_term >> max_return_docs
-max_return_docs_firststep = max_return_docs * 10 # at the first step of search, maintain more docs than final docs number
+max_return_docs = 10 # make sure max_docs_per_term >> max_return_docs
+max_return_docs_firststep = max_return_docs * 3 # at the first step of search, maintain more docs than final docs number
 
 # weighted zone weights
 w_title = 0.8

@@ -66,19 +66,19 @@ class DBManager:
 
     def create_idx(self):
         # try:
-        conn = sqlite3.connect(self.index_db)
-        c = conn.cursor()
+        # conn = sqlite3.connect(self.index_db)
+        # c = conn.cursor()
         # c.execute('''CREATE INDEX term_index ON postings (term)''')
-        c.execute('''DROP INDEX term_index''')
-        print('droped')
+        # # c.execute('''DROP INDEX term_index''')
+        # # print('droped')
+        # conn.commit()
+        # conn.close()
+
+        conn = sqlite3.connect(self.page_db)
+        c = conn.cursor()
+        c.execute(''' CREATE INDEX doc_index ON pages (id)''')
         conn.commit()
         conn.close()
-
-            # conn = sqlite3.connect(self.page_db)
-            # c = conn.cursor()
-            # c.execute(''' CREATE INDEX doc_index ON pages (id)''')
-            # conn.commit()
-            # conn.close()
         # except:
         #     print('Index existed')
         # else:

@@ -13,7 +13,7 @@ from utils import extract_terms_from_sentence, wash_text, format_text, cosine_si
 import itertools
 
 
-def process_term_posting(packed_params, total_pages=21229916, rank_mode=1):
+def process_term_posting(packed_params, total_pages=4599026, rank_mode=1):
     """
     Calculate normed query tf-idf and doc tf-idf for term
 
@@ -39,7 +39,7 @@ def process_term_posting(packed_params, total_pages=21229916, rank_mode=1):
         postings, tf_query, rank_mode = packed_params
     # print(postings)
     rank_mode = rank_mode[0]
-    print("here:", rank_mode)
+    # print("here:", rank_mode)
     n_unique_terms = len(postings)
     query_vec = [0]*n_unique_terms
 
@@ -88,10 +88,15 @@ def select_term_given_vec(vec, terms):
 
 
 class SearchManager:
+    """
+    Vocab size: 5405638
+    Total Docs: 4599026
+    """
     def __init__(self):
-        self.db = DBManager(page_db=config.demo_page_db,
-                            index_db=config.demo_index_db)
-        # self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+
+        # self.db = DBManager(page_db=config.demo_page_db,
+        #                     index_db=config.demo_index_db)
+        self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
@@ -115,7 +120,7 @@ class SearchManager:
     def _search(self, query, rank_mode, concurrent=True):
         terms = extract_terms_from_sentence(query)
         if len(terms) == 0:
-            return None
+            return None, None
 
         unique_terms = set(terms)
         n_unique = len(unique_terms)
@@ -129,8 +134,11 @@ class SearchManager:
 
         # 1. calculate tf-idf for query and docs
         tf_query = [terms.count(t[0]) for t in postings]
-        # print(len(postings))
+        print(len(postings))
         n_unique = len(postings)
+        if n_unique == 0:
+            return None, None
+            
         print("in _search", rank_mode)
         if not concurrent or n_unique < 2:
             start = timer()
@@ -154,7 +162,7 @@ class SearchManager:
             valid_terms = list(itertools.chain(*term_list))
             query_vec, doc_vecs = merge_scores(query_vec_list, doc_vecs_list,
                                                n_unique)
-
+            print(f"Concurrent process cost {timer()-start} s")
         # 2. compute query-doc similarity
         doc_scores = []  # (doc_id, score)
 
@@ -262,18 +270,22 @@ class SearchManager:
                                     reverse=True)
 
         n_searched = len(doc_scores)
-        
+
         # remove repeated pages
         unique_ids = set()
         unique_doc_scores = []
         for d in doc_scores:
             if d[0] not in unique_ids:
                 unique_doc_scores.append(d)
-            #if len(unique_doc_scores) == config.max_return_docs:
-                #break
+            if len(unique_doc_scores) == config.max_return_docs_firststep:
+                break
+
         # sync pages and doc_scores
         page_ids = [d[0] for d in unique_doc_scores]
+        read_start = timer()
         pages = self.db.read_pages(page_ids)
+        print(f"Load pages cost {timer()-read_start} s")
+
         sync_doc_scores = []
         sync_page = []
         for page in pages:
@@ -339,17 +351,17 @@ class SearchManager:
 
         
 
-        for page in page_list:
-            print("ID: {}\tScores: {}\tTerms:{}".format(
-                page['ID'], page['score'], page['terms']))
-            to_remove = []
-            for t in page['terms']:
-                if t not in page['content'].lower():
-                    print(f"no {t} in page {page['ID']}")
-                    # page['terms'].remove(t)
-                    to_remove.append(t)
-            for t in to_remove:
-                page['terms'].remove(t)
+        # for page in page_list:
+        #     # print("ID: {}\tScores: {}\tTerms:{}".format(
+        #     #     page['ID'], page['score'], page['terms']))
+        #     to_remove = []
+        #     for t in page['terms']:
+        #         if t not in page['content'].lower():
+        #             print(f"no {t} in page {page['ID']}")
+        #             # page['terms'].remove(t)
+        #             to_remove.append(t)
+        #     for t in to_remove:
+        #         page['terms'].remove(t)
 
         # print(time_str, querys, n_searched)
         #print("top k", len(page_list), n_searched)
