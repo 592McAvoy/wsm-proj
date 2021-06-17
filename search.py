@@ -349,7 +349,7 @@ def read_freq_word():
 if __name__ == "__main__":
     proc = SearchManager()
 
-    query = 'go go out for experct snacks'
+    query = 'macdonal morning evening'
     # query = input('Please input query:\n')
     # mode 1: tf-idf
     # mode 2: cosine sim
@@ -357,4 +357,4 @@ if __name__ == "__main__":
     # mode 4: fast cosine
     # mode 5: weighted zone
 
-    proc.search(query, rank_mode = 5)
+    proc.search(query, rank_mode = 3)

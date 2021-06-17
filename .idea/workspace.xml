@@ -13,8 +13,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/utils.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="204">
-              <caret line="147" column="27" lean-forward="true" selection-start-line="147" selection-start-column="27" selection-end-line="147" selection-end-column="27" />
+            <state relative-caret-position="272">
+              <caret line="157" column="45" selection-start-line="157" selection-start-column="45" selection-end-line="157" selection-end-column="45" />
               <folding>
                 <element signature="e#0#11#0" expanded="true" />
               </folding>
@@ -25,8 +25,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/search.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="322">
-              <caret line="312" column="36" lean-forward="true" selection-start-line="312" selection-start-column="36" selection-end-line="312" selection-end-column="36" />
+            <state relative-caret-position="-4727">
+              <caret line="51" column="43" selection-start-line="51" selection-start-column="36" selection-end-line="51" selection-end-column="43" />
               <folding>
                 <element signature="e#0#10#0" expanded="true" />
               </folding>
@@ -116,6 +116,7 @@
       <find>remove</find>
       <find>== 2</find>
       <find>== 1</find>
+      <find>entropy</find>
       <find>weighted</find>
     </findStrings>
   </component>
@@ -127,9 +128,9 @@
       <list>
         <option value="$PROJECT_DIR$/check_data.py" />
         <option value="$PROJECT_DIR$/db.py" />
-        <option value="$PROJECT_DIR$/utils.py" />
         <option value="$PROJECT_DIR$/config.py" />
         <option value="$PROJECT_DIR$/search.py" />
+        <option value="$PROJECT_DIR$/utils.py" />
       </list>
     </option>
   </component>
@@ -251,16 +252,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/utils.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="204">
-          <caret line="147" column="27" lean-forward="true" selection-start-line="147" selection-start-column="27" selection-end-line="147" selection-end-column="27" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://E:/ProgramFileE/python/Python36/Lib/multiprocessing/pool.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="232">
@@ -295,10 +286,20 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/utils.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="272">
+          <caret line="157" column="45" selection-start-line="157" selection-start-column="45" selection-end-line="157" selection-end-column="45" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/search.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="322">
-          <caret line="312" column="36" lean-forward="true" selection-start-line="312" selection-start-column="36" selection-end-line="312" selection-end-column="36" />
+        <state relative-caret-position="-4727">
+          <caret line="51" column="43" selection-start-line="51" selection-start-column="36" selection-end-line="51" selection-end-column="43" />
           <folding>
             <element signature="e#0#10#0" expanded="true" />
           </folding>
