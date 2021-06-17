@@ -42,7 +42,6 @@ def wash_text(text):
     out = out.replace("== ", "==\n")
     return out
 
-
 def get_terms_from_page(page):
     sentences = nltk.sent_tokenize(page.text)
     sentences.append(page.title)
@@ -108,6 +107,11 @@ def split(a, n):
     ret = [a[i*k+min(i, m):(i+1)*k+min(i+1, m)] for i in range(n)]
     return ret
 
+def fast_cosine_similarity(doc_score, page):
+    "need to divide the length of document"
+    wtf = doc_score[3]
+    return wtf/(len(page[1].split()) + len(page[2].split()))
+
 
 def cosine_similarity(v1, v2):
     "compute cosine similarity of v1 to v2: (v1 dot v2)/{||v1||*||v2||)"
@@ -119,6 +123,24 @@ def cosine_similarity(v1, v2):
 
     return sumxy/math.sqrt(sumxx*sumyy)
 
+def weighted_zone(terms, page, w_title, w_body):
+    "page[1] - title"
+    "page[2] - body"
+    title_sum = 0
+    body_sum = 0
+
+    for term in terms:
+        for word in page[1].split():
+            if term in word.lower():
+                title_sum += 1
+                break
+
+        for word in page[2].split():
+            if term in word.lower():
+                body_sum += 1
+                break
+
+    return w_title * title_sum + w_body * body_sum
 
 def cal_norm_tf_idf(tf, df, N_doc):
     if tf != 0:
@@ -128,6 +150,17 @@ def cal_norm_tf_idf(tf, df, N_doc):
 
     return tf*idf
 
+def cal_tf_idf(tf, df, N_doc):
+    idf = 1 + math.log(df / N_doc)
+    return tf * idf
+
+def cal_entropy_tf_f(docid_tf, N_doc):
+    f = sum(docid_tf[:][1])
+    entropy_sum = 0
+    for doc_id, tf in docid_tf:
+        entropy_sum += f/tf * math.log(tf/f)
+
+    return 1 - entropy_sum/math.log(N_doc)
 
 def merge_scores(query_vec_list, doc_vecs_list, n_unique):
     query_vec = [0]*n_unique
@@ -170,6 +203,7 @@ def extarct_id_tf(docs):
     return ret
 
 import string
+
 def remove_puntuation(s):
     # table = string.maketrans("","")
     regex = re.compile('[%s]' % re.escape(string.punctuation))
@@ -178,3 +212,4 @@ def remove_puntuation(s):
 if __name__ == '__main__':
     html = '<tile>hi<tile> ==me=='
     print(wash_text(html))
+

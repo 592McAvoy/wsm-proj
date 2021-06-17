@@ -7,16 +7,16 @@ from multiprocessing import Pool
 from timeit import default_timer as timer
 import enchant
 from fnmatch import fnmatch
-from utils import extract_terms_from_sentence, wash_text, cosine_similarity, \
-    split, cal_norm_tf_idf, extarct_id_tf, merge_scores, remove_puntuation
+from utils import extract_terms_from_sentence, wash_text, cosine_similarity, split, \
+    cal_norm_tf_idf, extarct_id_tf, merge_scores, fast_cosine_similarity, weighted_zone, \
+    cal_entropy_tf_f, cal_tf_idf, remove_puntuation
 import itertools
 
-
-def process_term_posting(packed_params, total_pages=11650115):
+def process_term_posting(packed_params, total_pages=21229916, rank_mode = 1):
     """
-    Calculate normed query tf-idf and doc tf-idf for term 
+    Calculate normed query tf-idf and doc tf-idf for term
 
-    Args: 
+    Args:
         posting (tuple): (term, docs)
         tf_query (list): list of term frequency in query
         total_pages (int): the amount of pages
@@ -37,7 +37,7 @@ def process_term_posting(packed_params, total_pages=11650115):
         postings, tf_query = packed_params
     # print(postings)
     n_unique_terms = len(postings)
-    query_vec = [0] * n_unique_terms
+    query_vec = [0]*n_unique_terms
 
     doc_vecs = {}
     terms = []
@@ -45,10 +45,16 @@ def process_term_posting(packed_params, total_pages=11650115):
         terms.append(term)
         if len(docs) > 0:
             docid_tf = extarct_id_tf(docs)
-            df = len(docid_tf)
-            query_vec[i] = cal_norm_tf_idf(tf=tf_query[i],
-                                           df=df,
-                                           N_doc=total_pages)
+
+            if rank_mode == 3:# use entropy to calculate idf
+                df = cal_entropy_tf_f(docid_tf, total_pages)
+            else:
+                df = len(docid_tf)
+
+            if rank_mode == 1: # use unnormalized tf-idf
+                query_vec[i] = cal_tf_idf(tf=tf_query[i], df=df, N_doc=total_pages)
+            else:
+                query_vec[i] = cal_norm_tf_idf(tf=tf_query[i], df=df, N_doc=total_pages)
 
             # sort by tf
             docid_tf = sorted(docid_tf, key=lambda d: d[1], reverse=True)
@@ -67,12 +73,11 @@ def select_term_given_vec(vec, terms):
             select.append(terms[i])
     return select
 
-
 class SearchManager:
     def __init__(self):
-        # self.db = DBManager(page_db=config.demo_page_db,
-        #                     index_db=config.demo_index_db)
-        self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+        self.db = DBManager(page_db=config.demo_page_db,
+                             index_db=config.demo_index_db)
+        #self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
@@ -118,8 +123,7 @@ class SearchManager:
         n_unique = len(postings)
         if not concurrent or n_unique < 2:
             start = timer()
-            query_vec, doc_vecs, terms = process_term_posting(
-                (postings, tf_query))
+            query_vec, doc_vecs = process_term_posting((postings, tf_query, rank_mode))
             print(f"Sequential process cost {timer()-start} s")
         # exit()
         else:
@@ -145,15 +149,10 @@ class SearchManager:
         print(select_term_given_vec(query_vec, terms))
         for doc_id, doc_vec in doc_vecs.items():
             # calculate cosine similarity
-            if rank_mode == 'cos':
-                doc_scores.append(
-                    (doc_id, cosine_similarity(query_vec, doc_vec), select_term_given_vec(doc_vec, terms)))
-            else:
-                # add new ranking method here
-                raise NotImplementedError(rank_mode)
-
-        # 3. return first N pages (id, score)
+            doc_scores.append((doc_id, cosine_similarity(query_vec, doc_vec), select_term_given_vec(doc_vec, terms),sum(doc_vec)))
+        # sort
         doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+
         print(f'Searched for {len(doc_scores)} pages')
 
         # return doc_scores[:config.max_return_docs]
@@ -212,7 +211,7 @@ class SearchManager:
         # self.search(new_query)
         return new_query
 
-    def search(self, query, concurrent=True):
+    def search(self, query, concurrent=True, rank_mode=1):
         """
         wrapper of search logic
 
@@ -253,6 +252,27 @@ class SearchManager:
         # for i, page in enumerate(pages):
         page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
         pages = self.db.read_pages(page_ids)
+
+        if rank_mode == 4:
+            doc_fast_cos_scores = []
+            for doc_score, page in zip(doc_scores, pages):
+                doc_fast_cos_scores.append((doc_score[0], fast_cosine_similarity(doc_score, page), page))
+
+            doc_scores = sorted(doc_fast_cos_scores, key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores]
+            pages = [d[2] for d in doc_scores]
+
+        elif rank_mode == 5:# weighted zone
+            # After sorting the top k documents, using weighted zone ranking to rerank the documents
+            doc_scores = []
+            for id, page in zip(page_ids, pages):
+                doc_scores.append((id, weighted_zone(unique_terms, page, config.w_title, config.w_body), page))
+
+            doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores]
+            pages = [d[2] for d in doc_scores]
+
+        self.page_buffer = pages
 
         # return
 
@@ -310,4 +330,4 @@ if __name__ == "__main__":
 
     query = 'go out for experct snacks'
     # query = input('Please input query:\n')
-    proc.search(query)
+    proc.search(query, 4)

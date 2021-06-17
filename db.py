@@ -40,7 +40,6 @@ class DBManager:
     def __init__(self, page_db, index_db):
         self.page_db = page_db
         self.index_db = index_db
-    
         self.index_conn = sqlite3.connect(self.index_db, check_same_thread=False)
         self.page_conn = sqlite3.connect(self.page_db, check_same_thread=False)
         print('Database connected')
@@ -94,7 +93,7 @@ class DBManager:
             c.execute("INSERT INTO pages VALUES (?, ?, ?)", t)
 
         conn.commit()
-        # conn.close()
+        #conn.close()
 
     def write_postings_to_db(self, postings_lists):
         """
@@ -136,7 +135,6 @@ class DBManager:
 
         cursor = c.execute('SELECT count(1) FROM postings')
         rec = cursor.fetchone()[0]
-
         # conn.close()
         return rec
 
