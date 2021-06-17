@@ -284,8 +284,6 @@ class SearchManager:
         elif rank_mode == 2:
             print("Using cosine to rank")
 
-        self.page_buffer = pages
-
         # return
 
         time_cost = timer()-start
@@ -300,9 +298,9 @@ class SearchManager:
             'terms': doc_scores[i][2]
         } for i, page in enumerate(pages)]
 
-        self.page_buffer = pages
+        self.page_buffer = page_list
 
-        time_str = '{:.2f}'.format(time_cost)
+        time_str = '{:.3f}'.format(time_cost)
 
         n_searched = len(doc_scores)
 
