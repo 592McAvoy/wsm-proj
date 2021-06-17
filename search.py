@@ -12,7 +12,7 @@ from utils import extract_terms_from_sentence, wash_text, cosine_similarity, spl
     cal_entropy_tf_f, cal_tf_idf, remove_puntuation
 import itertools
 
-def process_term_posting(packed_params, total_pages=21229916, rank_mode = 1):
+def process_term_posting(packed_params, total_pages=21229916):
     """
     Calculate normed query tf-idf and doc tf-idf for term
 
@@ -32,10 +32,13 @@ def process_term_posting(packed_params, total_pages=21229916, rank_mode = 1):
         postings, tf_query = packed_params[0][0], packed_params[0][1]
         postings = [postings]
         tf_query = [tf_query]
+        rank_mode = [packed_params[0][2]]
         # print(postings)
     else:
-        postings, tf_query = packed_params
+        postings, tf_query, rank_mode = packed_params
     # print(postings)
+    rank_mode = rank_mode[0]
+    print("here:", rank_mode)
     n_unique_terms = len(postings)
     query_vec = [0]*n_unique_terms
 
@@ -47,11 +50,13 @@ def process_term_posting(packed_params, total_pages=21229916, rank_mode = 1):
             docid_tf = extarct_id_tf(docs)
 
             if rank_mode == 3:# use entropy to calculate idf
+                print("Using engopy + cosine to rank")
                 df = cal_entropy_tf_f(docid_tf, total_pages)
             else:
                 df = len(docid_tf)
 
             if rank_mode == 1: # use unnormalized tf-idf
+                print("Using unnormalized tf-idf to rank")
                 query_vec[i] = cal_tf_idf(tf=tf_query[i], df=df, N_doc=total_pages)
             else:
                 query_vec[i] = cal_norm_tf_idf(tf=tf_query[i], df=df, N_doc=total_pages)
@@ -75,9 +80,9 @@ def select_term_given_vec(vec, terms):
 
 class SearchManager:
     def __init__(self):
-        #elf.db = DBManager(page_db=config.demo_page_db,
-        #                     index_db=config.demo_index_db)
-        self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+        self.db = DBManager(page_db=config.demo_page_db,
+                             index_db=config.demo_index_db)
+        #self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
@@ -102,7 +107,7 @@ class SearchManager:
 
         return recommender
 
-    def _search(self, query, concurrent=True, rank_mode='cos'):
+    def _search(self, query, rank_mode, concurrent=True):
         terms = extract_terms_from_sentence(query)
         if len(terms) == 0:
             return None
@@ -121,19 +126,21 @@ class SearchManager:
         tf_query = [terms.count(t[0]) for t in postings]
         # print(len(postings))
         n_unique = len(postings)
+        print("in _search", rank_mode)
         if not concurrent or n_unique < 2:
             start = timer()
-            query_vec, doc_vecs = process_term_posting((postings, tf_query, rank_mode))
+            query_vec, doc_vecs = process_term_posting((postings, tf_query, [rank_mode]*len(postings)))
             print(f"Sequential process cost {timer()-start} s")
         # exit()
         else:
             start = timer()
             n_proc = min(n_unique, os.cpu_count() // 2)
             pool = Pool(n_proc)
-            pack = list(zip(postings, tf_query))
+            n_rank_mode = [rank_mode] * len(postings)
+            pack = list(zip(postings, tf_query, n_rank_mode))
             # print(len(pack))
             n_part_params = split(pack, n_proc)
-            # print(n_part_params[2])
+            #print(n_part_params)
             results = pool.map(process_term_posting, n_part_params)
             pool.close()
             pool.join()
@@ -211,7 +218,7 @@ class SearchManager:
         # self.search(new_query)
         return new_query
 
-    def search(self, query, concurrent=True, rank_mode=1):
+    def search(self, query, rank_mode, concurrent=True):
         """
         wrapper of search logic
 
@@ -235,14 +242,15 @@ class SearchManager:
         # exit()
 
         # pages, doc_scores = self._search(query, concurrent=True)
+        print("in search", rank_mode)
         doc_scores, unique_terms = self._search(
-            query, concurrent=concurrent)  # (id, score, terms)
+            query, concurrent=concurrent, rank_mode=rank_mode)  # (id, score, terms)
         if doc_scores is None:
             print(f'No valid input in {query}')
             return None, '', querys, 0
 
         if fuzzy_query != query:
-            doc_scores_fuzzy, unique_terms = self._search(fuzzy_query, concurrent=concurrent)
+            doc_scores_fuzzy, unique_terms = self._search(fuzzy_query, concurrent=concurrent, rank_mode=rank_mode)
             if doc_scores_fuzzy is not None:
                 doc_scores.extend(doc_scores_fuzzy)
                 doc_scores = sorted(doc_scores,
@@ -254,6 +262,7 @@ class SearchManager:
         pages = self.db.read_pages(page_ids)
 
         if rank_mode == 4:
+            print("Using fast cosine to rank")
             doc_fast_cos_scores = []
             for doc_score, page in zip(doc_scores, pages):
                 doc_fast_cos_scores.append((doc_score[0], fast_cosine_similarity(doc_score, page), page))
@@ -263,6 +272,7 @@ class SearchManager:
             pages = [d[2] for d in doc_scores]
 
         elif rank_mode == 5:# weighted zone
+            print("Using weighted zone to rank")
             # After sorting the top k documents, using weighted zone ranking to rerank the documents
             doc_scores = []
             for id, page in zip(page_ids, pages):
@@ -271,6 +281,8 @@ class SearchManager:
             doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
             page_ids = [d[0] for d in doc_scores]
             pages = [d[2] for d in doc_scores]
+        elif rank_mode == 2:
+            print("Using cosine to rank")
 
         self.page_buffer = pages
 
@@ -330,4 +342,10 @@ if __name__ == "__main__":
 
     query = 'go out for experct snacks'
     # query = input('Please input query:\n')
-    proc.search(query, 4)
+    # mode 1: tf-idf
+    # mode 2: cosine sim
+    # mode 3: entropy
+    # mode 4: fast cosine
+    # mode 5: weighted zone
+
+    proc.search(query, rank_mode=1)
