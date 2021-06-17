@@ -81,6 +81,7 @@ def process_lines(lines):
 
         # if (i+1) % 1000 == 0:
         #     print(f'{i+1} pages processed.', end='\r')
+    print('over')
     return pages, dic
 
 

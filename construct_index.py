@@ -44,7 +44,7 @@ class ReversePostingListConstuctor:
             pages, dic = process_lines(lines)
             print(f'Sequenctial processing uses {timer()-start} s')
         else:
-            n_cpu = os.cpu_count()//2
+            n_cpu = os.cpu_count()//4
             # print(f'{n_cpu} CPUs')
             pool = Pool(processes=n_cpu)
             n_part_lines = split(lines, n_cpu)
@@ -80,9 +80,9 @@ def read_data(path='data/wiki/partitions/test.ndjson'):
             data.append(json.loads(l))
     return data
 
-import sys
-print(sys.getrecursionlimit())
-sys.setrecursionlimit(1500)
+# import sys
+# print(sys.getrecursionlimit())
+# sys.setrecursionlimit(1500)
 if __name__ == "__main__":
     """
     Processing 941,373 pages in 811s
@@ -106,6 +106,7 @@ if __name__ == "__main__":
                 continue
             else:
                 current = None
+                continue
         
         fn = os.path.join(wiki_dir, part)
         proc.set_file(fn)

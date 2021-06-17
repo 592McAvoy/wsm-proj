@@ -261,6 +261,8 @@ class SearchManager:
                                     key=lambda d: d[1],
                                     reverse=True)
 
+        n_searched = len(doc_scores)
+        
         # remove repeated pages
         unique_ids = set()
         unique_doc_scores = []
@@ -326,7 +328,7 @@ class SearchManager:
 
         time_str = '{:.3f}'.format(time_cost)
 
-        n_searched = len(doc_scores)
+        
 
         for page in page_list:
             print("ID: {}\tScores: {}\tTerms:{}".format(

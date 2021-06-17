@@ -138,6 +138,8 @@ data/db/index.db
 data/db/pages.db
 data/db/index_all.db
 data/db/pages_all.db
+data/db/index_all.db-journal
+data/db/pages_all.db-journal
 
 .vscode
 .idea
