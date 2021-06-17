@@ -66,7 +66,11 @@ def process_term_posting(packed_params, total_pages=21229916):
             for doc_id, tf in docid_tf[:config.max_docs_per_term]:
                 if doc_id not in doc_vecs.keys():
                     doc_vecs[doc_id] = [0] * n_unique_terms
-                doc_vecs[doc_id][i] = cal_norm_tf_idf(tf, df, total_pages)
+                if rank_mode == 1:
+                    doc_vecs[doc_id][i] = cal_tf_idf(tf, df, total_pages)
+                    #print("compare:", cal_tf_idf(tf, df, total_pages), cal_norm_tf_idf(tf, df, total_pages))
+                else:
+                    doc_vecs[doc_id][i] = cal_norm_tf_idf(tf, df, total_pages)
 
     return query_vec, doc_vecs, terms
 
@@ -250,7 +254,8 @@ class SearchManager:
             return None, '', querys, 0
 
         if fuzzy_query != query:
-            doc_scores_fuzzy, unique_terms = self._search(fuzzy_query, concurrent=concurrent, rank_mode=rank_mode)
+            doc_scores_fuzzy, unique_terms_fuzzy = self._search(fuzzy_query, concurrent=concurrent, rank_mode=rank_mode)
+            unique_terms = set.union(unique_terms, unique_terms_fuzzy)
             if doc_scores_fuzzy is not None:
                 doc_scores.extend(doc_scores_fuzzy)
                 doc_scores = sorted(doc_scores,
@@ -258,8 +263,9 @@ class SearchManager:
                                     reverse=True)
 
         # for i, page in enumerate(pages):
-        page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
+        page_ids = [d[0] for d in doc_scores]
         pages = self.db.read_pages(page_ids)
+        #print("before", len(pages))
 
         if rank_mode == 4:
             print("Using fast cosine to rank")
@@ -270,13 +276,14 @@ class SearchManager:
             doc_scores = sorted(doc_fast_cos_scores, key=lambda d: d[1], reverse=True)
             page_ids = [d[0] for d in doc_scores]
             pages = [d[3] for d in doc_scores]
+            #print("after", len(pages))
 
         elif rank_mode == 5:# weighted zone
             print("Using weighted zone to rank")
             # After sorting the top k documents, using weighted zone ranking to rerank the documents
             doc_weighted_scores = []
-            for doc_score, id, page in zip(doc_scores, page_ids, pages):
-                doc_weighted_scores.append((id, weighted_zone(unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
+            for doc_score, page in zip(doc_scores, pages):
+                doc_weighted_scores.append((doc_score[0], weighted_zone(unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
 
             doc_scores = sorted(doc_weighted_scores, key=lambda d: d[1], reverse=True)
             page_ids = [d[0] for d in doc_scores]
@@ -340,7 +347,7 @@ def read_freq_word():
 if __name__ == "__main__":
     proc = SearchManager()
 
-    query = 'go out for experct snacks'
+    query = 'go go out for experct snacks'
     # query = input('Please input query:\n')
     # mode 1: tf-idf
     # mode 2: cosine sim
@@ -348,4 +355,4 @@ if __name__ == "__main__":
     # mode 4: fast cosine
     # mode 5: weighted zone
 
-    proc.search(query)
+    proc.search(query, rank_mode = 1)
