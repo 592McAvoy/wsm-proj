@@ -12,3 +12,4 @@ max_return_docs_firststep = max_return_docs * 10 # at the first step of search, 
 # weighted zone weights
 w_title = 0.8
 w_body = 0.2 # w_title + w_page = 1
+max_return_docs = 10 # make sure max_docs_per_term >> max_return_docs

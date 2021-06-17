@@ -40,6 +40,9 @@ class DBManager:
     def __init__(self, page_db, index_db):
         self.page_db = page_db
         self.index_db = index_db
+        self.index_conn = sqlite3.connect(self.index_db, check_same_thread=False)
+        self.page_conn = sqlite3.connect(self.page_db, check_same_thread=False)
+        print('Database connected')
 
     def create_table(self):
         if not os.path.exists(self.page_db):
@@ -80,7 +83,8 @@ class DBManager:
             print('Index created')
 
     def write_pages_to_db(self, pages):
-        conn = sqlite3.connect(self.page_db)
+        # conn = sqlite3.connect(self.page_db)
+        conn = self.page_conn
         c = conn.cursor()
 
         for page in pages:
@@ -89,7 +93,7 @@ class DBManager:
             c.execute("INSERT INTO pages VALUES (?, ?, ?)", t)
 
         conn.commit()
-        conn.close()
+        #conn.close()
 
     def write_postings_to_db(self, postings_lists):
         """
@@ -98,7 +102,8 @@ class DBManager:
         Args:
             postings_lists:  Dic of {term, Posting}
         """
-        conn = sqlite3.connect(self.index_db)
+        # conn = sqlite3.connect(self.index_db)
+        conn = self.index_conn
         c = conn.cursor()
 
         for term, p in postings_lists.items():
@@ -121,30 +126,32 @@ class DBManager:
             # break
 
         conn.commit()
-        conn.close()
+        # conn.close()
 
     def get_vocabs_size(self):
-        conn = sqlite3.connect(self.index_db)
+        # conn = sqlite3.connect(self.index_db)
+        conn = self.index_conn
         c = conn.cursor()
 
         cursor = c.execute('SELECT count(1) FROM postings')
         rec = cursor.fetchone()[0]
-
-        conn.close()
+        # conn.close()
         return rec
 
     def exist_page(self, iid):
-        conn = sqlite3.connect(self.page_db)
+        # conn = sqlite3.connect(self.page_db)
+        conn = self.page_conn
         c = conn.cursor()
 
         cursor = c.execute('SELECT * FROM pages WHERE id=?', (iid,))
         row = cursor.fetchone()
 
-        conn.close()
+        # conn.close()
         return (row is not None)
 
     def read_pages(self, ids):
-        conn = sqlite3.connect(self.page_db)
+        # conn = sqlite3.connect(self.page_db)
+        conn = self.page_conn
         c = conn.cursor()
 
         placeholder = ','.join(['?'] * len(ids))
@@ -153,11 +160,12 @@ class DBManager:
         cursor = c.execute(query_str, list(ids))
         rec = cursor.fetchall()
 
-        conn.close()
+        # conn.close()
         return rec
 
     def read_postings(self, terms):
-        conn = sqlite3.connect(self.index_db)
+        # conn = sqlite3.connect(self.index_db)
+        conn = self.index_conn
         c = conn.cursor()
 
         placeholder = ','.join(['?'] * len(terms))
@@ -167,21 +175,19 @@ class DBManager:
 
         rec = cursor.fetchall()
 
-        conn.close()
+        # conn.close()
         return rec
 
-    def get_current_max_page_id(self):
-        conn = sqlite3.connect(self.page_db)
+    def get_page_size(self):
+        # conn = sqlite3.connect(self.page_db)
+        conn = self.page_conn
         c = conn.cursor()
 
-        ret = c.execute('SELECT max(id) from pages')
-        for row in ret:
-            current_id = row[0]
-        conn.close()
+        ret = c.execute('SELECT count(1) from pages')
+        ret = ret.fetchone()[0]
+        # conn.close()
 
-        if current_id is None:
-            current_id = -1
-        return current_id
+        return ret
 
     def delete_number_term(self):
         import re
@@ -201,3 +207,28 @@ class DBManager:
         conn.commit()
         conn.close()
 
+    def check_term_size(self, length=50):
+        # conn = sqlite3.connect(self.index_db)
+        conn = self.index_conn
+
+        # def match_alpha(item):
+        #     return item.isalpha()
+        # conn.create_function("IS_ALPHA", 1, match_alpha)
+
+        c = conn.cursor()
+
+        # ret = c.execute('DELETE from postings where not IS_ALPHA(term)')
+        ret = c.execute('SELECT count(1) from postings where length(term) > ?', (length, ))
+        print(ret.fetchone()[0])
+        ret = c.execute('SELECT term from postings where length(term) > ?', (length, ))
+        ret = ret.fetchall()[-10:]
+        # conn.commit()
+        # conn.close()
+
+        return ret
+    
+    def __del__(self):
+        self.index_conn.close()
+        self.page_conn.close()
+
+        print('Database closed')

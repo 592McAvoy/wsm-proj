@@ -9,15 +9,15 @@ import enchant
 from fnmatch import fnmatch
 from utils import extract_terms_from_sentence, wash_text, cosine_similarity, split, \
     cal_norm_tf_idf, extarct_id_tf, merge_scores, fast_cosine_similarity, weighted_zone, \
-    cal_entropy_tf_f, cal_tf_idf
+    cal_entropy_tf_f, cal_tf_idf, remove_puntuation
 
 def process_term_posting(packed_params, total_pages=21229916, rank_mode = 1):
     """
-    Calculate normed query tf-idf and doc tf-idf for term 
+    Calculate normed query tf-idf and doc tf-idf for term
 
     Args:
         posting (tuple): (term, docs)
-        terms (list): list of term frequency in query
+        tf_query (list): list of term frequency in query
         total_pages (int): the amount of pages
 
     Returns:
@@ -25,7 +25,7 @@ def process_term_posting(packed_params, total_pages=21229916, rank_mode = 1):
         and a dictionary of doc tf-idf {docid: tf-idf}
     """
     if len(packed_params) == 1:
-        # print(packed_params)       
+        # print(packed_params)
         postings, tf_query = packed_params[0][0], packed_params[0][1]
         postings = [postings]
         tf_query = [tf_query]
@@ -64,15 +64,18 @@ def process_term_posting(packed_params, total_pages=21229916, rank_mode = 1):
 
 class SearchManager:
     def __init__(self):
-        self.db = DBManager(page_db=config.demo_page_db, index_db=config.demo_index_db)
-        #self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+        self.db = DBManager(page_db=config.demo_page_db,
+                            index_db=config.demo_index_db)
+        # self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
         self.recommender = self._init_recommender()
+        self.page_buffer = None
+        self.querys = None  # 用于detail页面的高亮
 
         # print(f'Vocab size: {self.db.get_vocabs_size()}')
-        # print(f'Total Docs: {self.total_pages}')
+        # print(f'Total Docs: {self.db.get_page_size()}')
         # self.db.create_idx()
 
     def _init_common_word(self):
@@ -88,8 +91,11 @@ class SearchManager:
 
         return recommender
 
-    def _search(self, query, concurrent=True, rank_mode = 1):
-        terms = extract_terms_from_sentence(wash_text(query))
+    def _search(self, query, concurrent=True, rank_mode='cos'):
+        terms = extract_terms_from_sentence(query)
+        if len(terms) == 0:
+            return None
+
         unique_terms = set(terms)
         n_unique = len(unique_terms)
         if n_unique < 2:
@@ -102,14 +108,14 @@ class SearchManager:
 
         # 1. calculate tf-idf for query and docs
         tf_query = [terms.count(t[0]) for t in postings]
-        if not concurrent:
+        if not concurrent or len(postings) < 2:
             start = timer()
             query_vec, doc_vecs = process_term_posting((postings, tf_query, rank_mode))
             print(f"Sequential process cost {timer()-start} s")
         # exit()
         else:
             start = timer()
-            n_proc = min(n_unique, os.cpu_count()//2)
+            n_proc = min(n_unique, os.cpu_count() // 2)
             pool = Pool(n_proc)
             pack = list(zip(postings, tf_query))
             n_part_params = split(pack, n_proc)
@@ -117,8 +123,8 @@ class SearchManager:
             pool.close()
             pool.join()
             query_vec_list, doc_vecs_list = zip(*results)
-            query_vec, doc_vecs = merge_scores(
-                query_vec_list, doc_vecs_list, n_unique)
+            query_vec, doc_vecs = merge_scores(query_vec_list, doc_vecs_list,
+                                               n_unique)
             print(f"{n_proc} concurent process total cost {timer()-start} s")
 
         # 2. compute query-doc similarity
@@ -129,7 +135,65 @@ class SearchManager:
 
         # sort
         doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
-        print(len(doc_scores))
+
+        print(f'Searched for {len(doc_scores)} pages')
+
+        return doc_scores[:config.max_return_docs]
+
+    def most_frequent(self, candidates):
+        ret = (candidates[0], -1)
+        for s in candidates:
+            if s not in self.word_freq.keys():
+                continue
+            if int(self.word_freq[s]) > ret[1]:
+                ret = (s, int(self.word_freq[s]))
+        return ret[0]
+
+    def fuzzy_query(self, query):
+        # print(common_words.__)
+        new_query = query[:]
+        for t in query.split():
+            exist = self.recommender.check(t)
+            # replace the non-exist word by the most similiar and frequently used one
+            if not exist:
+                suggest = self.recommender.suggest(t)[:5]
+                if len(suggest) > 0:
+                    # print(suggest)
+                    pick = self.most_frequent(suggest)
+                    new_query = new_query.replace(t, pick)
+
+        if query != new_query:
+            print(f'Do you mean \'{new_query}\'?')
+
+        # self.search(new_query)
+        return new_query
+
+    def wildcard_query(self, query):
+        """
+        Support *
+
+        Example:
+            he*o -> hello, hero, ...
+        """
+
+        new_query = query[:]
+        for t in query.split():
+            if '*' in t:
+                for word in self.common_words:
+                    if fnmatch(word, t):
+                        new_query = new_query.replace(t, word)
+                        break
+
+                # print(f'pattern:{t}\t results:{words}')
+                # pick = self.most_frequent(words)
+
+        if query != new_query:
+            print(f'Search for \'{new_query}\'?')
+
+        # self.search(new_query)
+        return new_query
+
+    def search(self, query, concurrent=True, rank_mode=1):
 
         # 3. return first N pages
         page_ids = [d[0] for d in doc_scores[:config.max_return_docs_firststep]]
@@ -157,80 +221,98 @@ class SearchManager:
 
         #return pages, doc_weighted_zone_score
         return pages, doc_scores
-
-    def most_frequent(self, candidates):
-        ret = (candidates[0], -1)
-        for s in candidates:
-            if s not in self.word_freq.keys():
-                continue
-            if int(self.word_freq[s]) > ret[1]:
-                ret = (s, int(self.word_freq[s]))
-        return ret[0]
-
-    def fuzzy_search(self, query):
-        # print(common_words.__)
-        new_query = query[:]
-        for t in query.split():
-            exist = self.recommender.check(t)
-            # replace the non-exist word by the most similiar and frequently used one
-            if not exist:
-                suggest = self.recommender.suggest(t)[:5]
-                # print(suggest)
-                pick = self.most_frequent(suggest)
-                new_query = new_query.replace(t, pick)
-
-        if query != new_query:
-            print(f'Do you mean \'{new_query}\'?')
-
-        # self.search(new_query)
-        return new_query
-
-    def wildcard_search(self, query):
-        """
-        Support *
-
-        Example:
-            he*o -> hello, hero, ...
-        """
-
-        new_query = query[:]
-        for t in query.split():
-            if '*' in t:
-                for word in self.common_words:
-                    if fnmatch(word, t):
-                        new_query = new_query.replace(t, word)
-                        break
-
-                # print(f'pattern:{t}\t results:{words}')
-                # pick = self.most_frequent(words)
-
-        if query != new_query:
-            print(f'Search for \'{new_query}\'?')
-
-        # self.search(new_query)
-        return new_query
-
-    def search(self, query, rank_mode=1):
         """
         wrapper of search logic
 
         Args:
             query (string): the input query string
         """
-        print(f"Searching for {query}")
+        print(f"Searching for \'{query}\'")
 
+        start = timer()
+        query = wash_text(remove_puntuation(query))
+        # print(f'washed: {query}')
         if '*' in query:
-            query = self.wildcard_search(query)
+            query = self.wildcard_query(query)
 
-        query = self.fuzzy_search(query)
+        fuzzy_query = self.fuzzy_query(query)
 
-        pages, scores = self._search(query, concurrent=True, rank_mode = rank_mode)
+        # exit()
 
-        for i, page in enumerate(pages):
-            #print("page:", page, "\n score", doc_weighted_zone_scores)
-            print('[ID: {:04d} | Score: {:.4f}] Title: {}'.format(
-                page[0], scores[i][1], page[1]))
-            print(f'{wash_text(page[2][:1000])} ...\n')
+        # pages, doc_scores = self._search(query, concurrent=True)
+        doc_scores = self._search(query, concurrent=concurrent)
+        if doc_scores is None:
+            print(f'No valid input in {query}')
+            return None, '', ['', '']
+
+        if fuzzy_query != query:
+            doc_scores_fuzzy = self._search(fuzzy_query, concurrent=concurrent)
+            if doc_scores_fuzzy is not None:
+                doc_scores.extend(doc_scores_fuzzy)
+                doc_scores = sorted(doc_scores,
+                                    key=lambda d: d[1],
+                                    reverse=True)
+
+        # for i, page in enumerate(pages):
+        page_ids = [d[0] for d in doc_scores]
+        pages = self.db.read_pages(page_ids)
+
+        if rank_mode == 4:
+            doc_fast_cos_scores = []
+            for doc_score, page in zip(doc_scores, pages):
+                doc_fast_cos_scores.append((doc_score[0], fast_cosine_similarity(doc_score, page), page))
+
+            doc_scores = sorted(doc_fast_cos_scores, key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores]
+            pages = [d[2] for d in doc_scores]
+
+        elif rank_mode == 5:# weighted zone
+            # After sorting the top k documents, using weighted zone ranking to rerank the documents
+            doc_scores = []
+            for id, page in zip(page_ids, pages):
+                doc_scores.append((id, weighted_zone(unique_terms, page, config.w_title, config.w_body), page))
+
+            doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
+            page_ids = [d[0] for d in doc_scores]
+            pages = [d[2] for d in doc_scores]
+
+        self.page_buffer = pages
+
+        time_cost = timer() - start
+
+        page_list = [{
+            'ID': page[0],
+            'title': page[1],
+            'content': wash_text(page[2]),
+        } for page in pages]
+
+        time_str = '{:.5f}'.format(time_cost)
+        querys = [query, fuzzy_query]
+        if query == fuzzy_query:
+            querys[1] = None
+        self.querys = querys
+
+        return page_list, time_str, querys
+
+        # return result_dict
+
+        # return pages, time_cost
+        # for i, page in enumerate(pages):
+        #     print('[ID: {:04d} | Score: {:.4f}] Title: {}'.format(
+        #         page[0], doc_scores[i][1], page[1]))
+        #     print(f'{wash_text(page[2][:1000])} ...\n')
+
+    def read_page(self, page_id):
+        for page in self.page_buffer:
+            if page[0] == page_id:
+                detail_page = wash_text(page[2])
+                if self.querys[0] is not None:
+                    print(self.querys)
+                return {
+                    'title': page[1],
+                    'content': detail_page,
+                }
+        raise NotImplementedError(page_id)
 
 
 def read_freq_word():
@@ -245,14 +327,8 @@ def read_freq_word():
 
 
 if __name__ == "__main__":
-    # read_freq_word()
-    # exit()
     proc = SearchManager()
 
-    #query = 'har* university'
-    query = 'har* university Charles Syracuse'
+    query = 'go out for experct snacks'
+    # query = input('Please input query:\n')
     proc.search(query, 4)
-    # proc.fuzzy_search(query)
-
-    # query = 'miew wo'
-    # proc.wildcard_search(query)

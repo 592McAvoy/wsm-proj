@@ -14,7 +14,8 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
 
     def valid_word(w):
         w = w.lower()
-        return w.isalnum() and \
+        # return w.isalnum() and \
+        return w.isalpha() and\
             (w not in stop_words)
 
     def word2term(word):
@@ -26,16 +27,20 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
 
     tokenizer = nltk.RegexpTokenizer(r"\w+")
     words = tokenizer.tokenize(sentence)
+    # print(words)
     terms = [word2term(word) for word in words if valid_word(word)]
+    # print(terms)
 
     return terms
 
 
 def wash_text(text):
-    out = re.sub(r'(<|{).*(>|})', '', text)
-
-    return out.strip()
-
+    # out = re.sub(r'(<|{).*(>|})', '', text)
+    cleanr = re.compile('<.*?>')
+    out = re.sub(cleanr, '', text)
+    out = out.replace(" ==", "\n==")
+    out = out.replace("== ", "==\n")
+    return out
 
 def get_terms_from_page(page):
     sentences = nltk.sent_tokenize(page.text)
@@ -157,7 +162,6 @@ def cal_entropy_tf_f(docid_tf, N_doc):
 
     return 1 - entropy_sum/math.log(N_doc)
 
-
 def merge_scores(query_vec_list, doc_vecs_list, n_unique):
     query_vec = [0]*n_unique
     i = 0
@@ -197,3 +201,9 @@ def extarct_id_tf(docs):
         # doc_id, tf
         ret.append((int(doc[0]), int(doc[1])))
     return ret
+
+import string
+def remove_puntuation(s):
+    # table = string.maketrans("","")
+    regex = re.compile('[%s]' % re.escape(string.punctuation))
+    return regex.sub('', s)
