@@ -302,7 +302,7 @@ class SearchManager:
             'ID': page[0],
             'title':page[1],
             'content': wash_text(page[2]),
-            'score': doc_scores[i][1],
+            'score': '{:.4f}'.format(doc_scores[i][1]),
             'terms': doc_scores[i][2]
         } for i, page in enumerate(pages)]
 
@@ -324,7 +324,6 @@ class SearchManager:
     def read_page(self, page_id):
         for page in self.page_buffer:
             if page['ID'] == page_id:
-                detail_page = wash_text(page[2])
                 return page # including {'ID', 'title', 'content', 'score', 'terms'}
                 # if self.querys[0] is not None:
                 #     print(self.querys)
