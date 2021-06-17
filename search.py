@@ -265,7 +265,7 @@ class SearchManager:
             print("Using fast cosine to rank")
             doc_fast_cos_scores = []
             for doc_score, page in zip(doc_scores, pages):
-                doc_fast_cos_scores.append((doc_score[0], fast_cosine_similarity(doc_score, page), page))
+                doc_fast_cos_scores.append((doc_score[0], fast_cosine_similarity(doc_score, page), doc_score[2], page))
 
             doc_scores = sorted(doc_fast_cos_scores, key=lambda d: d[1], reverse=True)
             page_ids = [d[0] for d in doc_scores]
@@ -275,8 +275,8 @@ class SearchManager:
             print("Using weighted zone to rank")
             # After sorting the top k documents, using weighted zone ranking to rerank the documents
             doc_scores = []
-            for id, page in zip(page_ids, pages):
-                doc_scores.append((id, weighted_zone(unique_terms, page, config.w_title, config.w_body), page))
+            for doc_score, id, page in zip(doc_scores, page_ids, pages):
+                doc_scores.append((id, weighted_zone(unique_terms, page, config.w_title, config.w_body), doc_score[2], page))
 
             doc_scores = sorted(doc_scores, key=lambda d: d[1], reverse=True)
             page_ids = [d[0] for d in doc_scores]
