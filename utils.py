@@ -19,8 +19,8 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
             (w not in stop_words)
 
     def word2term(word):
-        if len(word) > 50:  # strange case (cause Recursion Error)
-            word = word[:50]
+        if len(word) > 20:  # strange case (cause Recursion Error)
+            word = word[:20]
         word = word.lower()
         word = stemmer.stem(word)
         return word
@@ -33,13 +33,20 @@ def extract_terms_from_sentence(sentence, stop_words=None, stemmer=None):
 
     return terms
 
-
-def wash_text(text):
+def format_text(text):
     # out = re.sub(r'(<|{).*(>|})', '', text)
     cleanr = re.compile('<.*?>')
     out = re.sub(cleanr, '', text)
     out = out.replace(" ==", "\n==")
     out = out.replace("== ", "==\n")
+    return out
+
+def wash_text(text):
+    # out = re.sub(r'(<|{).*(>|})', '', text)
+    cleanr = re.compile('<.*?>')
+    out = re.sub(cleanr, '', text)
+    # out = out.replace(" ==", "\n==")
+    # out = out.replace("== ", "==\n")
     return out
 
 def get_terms_from_page(page):

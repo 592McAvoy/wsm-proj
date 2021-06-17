@@ -14,18 +14,23 @@ import itertools
 
 
 class ReversePostingListConstuctor:
-    def __init__(self, file_path):
-        self.file_path = file_path
+    def __init__(self):
         self.db = DBManager(page_db=config.page_db,
                             index_db=config.index_db)
-        self.db.create_table()
         
+        # self.db.create_table()
+        # print(f'Vocab size: {self.db.get_vocabs_size()}')
+        # print(f'Total Docs: {self.db.get_page_size()}')
+        # self.db.create_idx()
+        
+    def set_file(self, file_path):
+        self.file_path = file_path
 
     def run(self, DEBUG=True, concurrent=False):
         start = timer()
-        print(f"Load json from {self.file_path}...")
+        print(f"Load from {self.file_path}...")
         lines = read_data(self.file_path)
-        print(f"Finish in {timer()-start} s")
+        print(f"Load {len(lines)} lines in {timer()-start} s")
 
         if self.db.exist_page(lines[0][0]):
             print('Processed before')
@@ -53,7 +58,7 @@ class ReversePostingListConstuctor:
 
             dic = merge_dics(dic_list)
 
-        
+        print(f'Concurrent processing uses {timer()-start} s')
         self.db.write_pages_to_db(pages)
         self.db.write_postings_to_db(dic)
             
@@ -89,8 +94,13 @@ if __name__ == "__main__":
     # exit()
     wiki_dir = 'data/wiki/partitions'
     parts = sorted(os.listdir(wiki_dir))
-    current = 'p20460153p20570392'
+    current = 'p15824603p17324602'
+    proc = ReversePostingListConstuctor()
+    
+    # exit()
     for part in parts:
+        if 'test' in part:
+            continue
         if current is not None:
             if current not in part:
                 continue
@@ -98,6 +108,7 @@ if __name__ == "__main__":
                 current = None
         
         fn = os.path.join(wiki_dir, part)
+        proc.set_file(fn)
         # fn = 'data/wiki/partitions/test.ndjson'
-        proc = ReversePostingListConstuctor(file_path=fn)
+        
         proc.run(DEBUG=False, concurrent=True)

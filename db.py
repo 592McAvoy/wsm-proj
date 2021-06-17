@@ -65,22 +65,24 @@ class DBManager:
             conn.close()
 
     def create_idx(self):
-        try:
-            conn = sqlite3.connect(self.index_db)
-            c = conn.cursor()
-            c.execute('''CREATE INDEX term_index ON postings (term)''')
-            conn.commit()
-            conn.close()
+        # try:
+        conn = sqlite3.connect(self.index_db)
+        c = conn.cursor()
+        # c.execute('''CREATE INDEX term_index ON postings (term)''')
+        c.execute('''DROP INDEX term_index''')
+        print('droped')
+        conn.commit()
+        conn.close()
 
-            conn = sqlite3.connect(self.page_db)
-            c = conn.cursor()
-            c.execute(''' CREATE INDEX doc_index ON pages (id)''')
-            conn.commit()
-            conn.close()
-        except:
-            print('index existed')
-        else:
-            print('Index created')
+            # conn = sqlite3.connect(self.page_db)
+            # c = conn.cursor()
+            # c.execute(''' CREATE INDEX doc_index ON pages (id)''')
+            # conn.commit()
+            # conn.close()
+        # except:
+        #     print('Index existed')
+        # else:
+        #     print('Index created')
 
     def write_pages_to_db(self, pages):
         # conn = sqlite3.connect(self.page_db)
@@ -139,7 +141,7 @@ class DBManager:
         return rec
 
     def exist_page(self, iid):
-        # conn = sqlite3.connect(self.page_db)
+        conn = sqlite3.connect(self.page_db)
         conn = self.page_conn
         c = conn.cursor()
 
@@ -233,3 +235,5 @@ class DBManager:
         self.page_conn.close()
 
         print('Database closed')
+
+
