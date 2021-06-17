@@ -218,7 +218,7 @@ class SearchManager:
         # self.search(new_query)
         return new_query
 
-    def search(self, query, rank_mode, concurrent=True):
+    def search(self, query, rank_mode=2, concurrent=True):
         """
         wrapper of search logic
 
@@ -350,4 +350,4 @@ if __name__ == "__main__":
     # mode 4: fast cosine
     # mode 5: weighted zone
 
-    proc.search(query, rank_mode=3)
+    proc.search(query)
