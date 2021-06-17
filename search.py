@@ -75,9 +75,9 @@ def select_term_given_vec(vec, terms):
 
 class SearchManager:
     def __init__(self):
-        self.db = DBManager(page_db=config.demo_page_db,
-                             index_db=config.demo_index_db)
-        #self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+        #elf.db = DBManager(page_db=config.demo_page_db,
+        #                     index_db=config.demo_index_db)
+        self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
@@ -156,7 +156,7 @@ class SearchManager:
         print(f'Searched for {len(doc_scores)} pages')
 
         # return doc_scores[:config.max_return_docs]
-        return doc_scores
+        return doc_scores, unique_terms
 
     def most_frequent(self, candidates):
         ret = (candidates[0], -1)
@@ -235,14 +235,14 @@ class SearchManager:
         # exit()
 
         # pages, doc_scores = self._search(query, concurrent=True)
-        doc_scores = self._search(
+        doc_scores, unique_terms = self._search(
             query, concurrent=concurrent)  # (id, score, terms)
         if doc_scores is None:
             print(f'No valid input in {query}')
             return None, '', querys, 0
 
         if fuzzy_query != query:
-            doc_scores_fuzzy = self._search(fuzzy_query, concurrent=concurrent)
+            doc_scores_fuzzy, unique_terms = self._search(fuzzy_query, concurrent=concurrent)
             if doc_scores_fuzzy is not None:
                 doc_scores.extend(doc_scores_fuzzy)
                 doc_scores = sorted(doc_scores,
