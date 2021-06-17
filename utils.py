@@ -163,7 +163,7 @@ def cal_tf_idf(tf, df, N_doc):
     return tf * idf
 
 def cal_entropy_tf_f(docid_tf, N_doc):
-    f = sum(docid_tf[:][1])
+    f = sum([docid[1] for docid in docid_tf])
     entropy_sum = 0
     for doc_id, tf in docid_tf:
         entropy_sum += f/tf * math.log(tf/f)

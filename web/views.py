@@ -17,11 +17,11 @@ def details(request):
     page = proc.read_page(id)
     for terms in page['terms']:
         page['content'] = page['content'].replace(
-            f"{terms}", f"<font color='red'><b>{terms}</b></font>")
+            f" {terms}", f"<font color='red'><b> {terms}</b></font>")
         # 首字母大写
         terms = terms.capitalize()
         page['content'] = page['content'].replace(
-            f"{terms}", f"<font color='red'><b>{terms}</b></font>")
+            f" {terms}", f"<font color='red'><b> {terms}</b></font>")
     para = {'id': id, 'title': page['title'], 'content': page['content']}
     return render(request, 'details.html', para)
 
@@ -42,8 +42,3 @@ def search(request):
     }
     result_json = json.dumps(para)
     return HttpResponse(result_json)
-
-
-def sort(request):
-    print(request)
-    return HttpResponse("Hello, world.")

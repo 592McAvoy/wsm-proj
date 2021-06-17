@@ -269,20 +269,29 @@ class SearchManager:
         for d in doc_scores:
             if d[0] not in unique_ids:
                 unique_doc_scores.append(d)
-            if len(unique_doc_scores) == config.max_return_docs:
-                break
-
+            #if len(unique_doc_scores) == config.max_return_docs:
+                #break
         # sync pages and doc_scores
         page_ids = [d[0] for d in unique_doc_scores]
         pages = self.db.read_pages(page_ids)
         sync_doc_scores = []
+        sync_page = []
         for page in pages:
             for d in unique_doc_scores:
                 if d[0] == page[0]:
                     # print((d[0], page[0]))
                     sync_doc_scores.append(d)
+                    sync_page.append(page)
                     break
+
         doc_scores = sync_doc_scores
+        pages = sync_page
+        score_page = []
+        for score, page in zip(doc_scores, pages):
+            score_page.append([score, page])
+        score_page = sorted(score_page, key=lambda d: d[0][1], reverse=True)
+        doc_scores = [score[0] for score in score_page]
+        pages = [page[1] for page in score_page]
 
         if rank_mode == 4:
             print("Using fast cosine to rank")
@@ -370,7 +379,7 @@ def read_freq_word():
 if __name__ == "__main__":
     proc = SearchManager()
 
-    query = 'go go out for experct snacks'
+    query = 'tradition draw example'
     # query = input('Please input query:\n')
     # mode 1: tf-idf
     # mode 2: cosine sim
