@@ -21,6 +21,8 @@ function goTop(acceleration, time) {
     var x3 = window.scrollX || 0;
     var y3 = window.scrollY || 0;
 
+    console.log(y1, y2, y3)
+    console.log($('#gotop').offset() )
     // 滚动条到页面顶部的水平距离
     var x = Math.max(x1, Math.max(x2, x3));
     // 滚动条到页面顶部的垂直距离

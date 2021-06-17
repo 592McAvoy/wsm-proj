@@ -9,6 +9,7 @@ import enchant
 from fnmatch import fnmatch
 from utils import extract_terms_from_sentence, wash_text, cosine_similarity, \
     split, cal_norm_tf_idf, extarct_id_tf, merge_scores, remove_puntuation
+import itertools
 
 
 def process_term_posting(packed_params, total_pages=11650115):
@@ -36,7 +37,7 @@ def process_term_posting(packed_params, total_pages=11650115):
         postings, tf_query = packed_params
     # print(postings)
     n_unique_terms = len(postings)
-    query_vec = [0]*n_unique_terms
+    query_vec = [0] * n_unique_terms
 
     doc_vecs = {}
     terms = []
@@ -45,8 +46,9 @@ def process_term_posting(packed_params, total_pages=11650115):
         if len(docs) > 0:
             docid_tf = extarct_id_tf(docs)
             df = len(docid_tf)
-            query_vec[i] = cal_norm_tf_idf(
-                tf=tf_query[i], df=df, N_doc=total_pages)
+            query_vec[i] = cal_norm_tf_idf(tf=tf_query[i],
+                                           df=df,
+                                           N_doc=total_pages)
 
             # sort by tf
             docid_tf = sorted(docid_tf, key=lambda d: d[1], reverse=True)
@@ -58,15 +60,25 @@ def process_term_posting(packed_params, total_pages=11650115):
     return query_vec, doc_vecs, terms
 
 
+def select_term_given_vec(vec, terms):
+    select = []
+    for i in range(len(vec)):
+        if vec[i] != 0:
+            select.append(terms[i])
+    return select
+
+
 class SearchManager:
     def __init__(self):
-        self.db = DBManager(page_db=config.demo_page_db, index_db=config.demo_index_db)
-        # self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
+        # self.db = DBManager(page_db=config.demo_page_db,
+        #                     index_db=config.demo_index_db)
+        self.db = DBManager(page_db=config.page_db, index_db=config.index_db)
         # self.total_pages = self.db.get_current_max_page_id()+1
         self.word_freq = read_freq_word()
         self.common_words = self._init_common_word()
         self.recommender = self._init_recommender()
         self.page_buffer = None
+        self.querys = None  # 用于detail页面的高亮
 
         # print(f'Vocab size: {self.db.get_vocabs_size()}')
         # print(f'Total Docs: {self.db.get_page_size()}')
@@ -106,12 +118,13 @@ class SearchManager:
         n_unique = len(postings)
         if not concurrent or n_unique < 2:
             start = timer()
-            query_vec, doc_vecs = process_term_posting((postings, tf_query))
+            query_vec, doc_vecs, terms = process_term_posting(
+                (postings, tf_query))
             print(f"Sequential process cost {timer()-start} s")
         # exit()
         else:
             start = timer()
-            n_proc = min(n_unique, os.cpu_count()//2)
+            n_proc = min(n_unique, os.cpu_count() // 2)
             pool = Pool(n_proc)
             pack = list(zip(postings, tf_query))
             # print(len(pack))
@@ -120,18 +133,21 @@ class SearchManager:
             results = pool.map(process_term_posting, n_part_params)
             pool.close()
             pool.join()
-            query_vec_list, doc_vecs_list = zip(*results)
-            query_vec, doc_vecs = merge_scores(
-                query_vec_list, doc_vecs_list, n_unique)
+            query_vec_list, doc_vecs_list, term_list = zip(*results)
+            terms = list(itertools.chain(*term_list))
+            # print(terms)
+            query_vec, doc_vecs = merge_scores(query_vec_list, doc_vecs_list,
+                                               n_unique)
             print(f"{n_proc} concurent process total cost {timer()-start} s")
 
         # 2. compute query-doc similarity
         doc_scores = []  # (doc_id, score)
+        print(select_term_given_vec(query_vec, terms))
         for doc_id, doc_vec in doc_vecs.items():
             # calculate cosine similarity
             if rank_mode == 'cos':
                 doc_scores.append(
-                    (doc_id, cosine_similarity(query_vec, doc_vec)))
+                    (doc_id, cosine_similarity(query_vec, doc_vec), select_term_given_vec(doc_vec, terms)))
             else:
                 # add new ranking method here
                 raise NotImplementedError(rank_mode)
@@ -220,7 +236,8 @@ class SearchManager:
         # exit()
 
         # pages, doc_scores = self._search(query, concurrent=True)
-        doc_scores = self._search(query, concurrent=concurrent)
+        doc_scores = self._search(
+            query, concurrent=concurrent)  # (id, score, terms)
         if doc_scores is None:
             print(f'No valid input in {query}')
             return None, '', querys, 0
@@ -229,18 +246,15 @@ class SearchManager:
             doc_scores_fuzzy = self._search(fuzzy_query, concurrent=concurrent)
             if doc_scores_fuzzy is not None:
                 doc_scores.extend(doc_scores_fuzzy)
-                doc_scores = sorted(
-                    doc_scores, key=lambda d: d[1], reverse=True)
+                doc_scores = sorted(doc_scores,
+                                    key=lambda d: d[1],
+                                    reverse=True)
 
         # for i, page in enumerate(pages):
         page_ids = [d[0] for d in doc_scores[:config.max_return_docs]]
         pages = self.db.read_pages(page_ids)
-        self.page_buffer = pages
 
-
-
-
-        # return 
+        # return
 
         time_cost = timer()-start
 
@@ -249,23 +263,34 @@ class SearchManager:
             'title':page[1],
             'content': wash_text(page[2]),
             'score': doc_scores[i][1],
-            # 'terms': []
+            'terms': doc_scores[i][2]
         } for i, page in enumerate(pages)]
+
+        self.page_buffer = pages
 
         time_str = '{:.2f}'.format(time_cost)
 
         n_searched = len(doc_scores)
 
+        # for page in page_list:
+        #     print("Title: {}\tScores: {:.2f}\tTerms:{}".format(
+        #         page['ID'], page['score'], page['terms']))
+
+        # print(time_str, querys, n_searched)
+
         return page_list, time_str, querys, n_searched
 
-        
     def read_page(self, page_id):
         for page in self.page_buffer:
-            if page[0] == page_id:
-                return {
-                    'title': page[1],
-                    'content': wash_text(page[2]),
-                }
+            if page['ID'] == page_id:
+                detail_page = wash_text(page[2])
+                return page # including {'ID', 'title', 'content', 'score', 'terms'}
+                # if self.querys[0] is not None:
+                #     print(self.querys)
+                # return {
+                #     'title': page[1],
+                #     'content': detail_page,
+                # }
         raise NotImplementedError(page_id)
 
 

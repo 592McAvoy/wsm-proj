@@ -2,16 +2,4 @@
     position:fixed;
     right:20px;
     bottom:20px;
-    }
-
-.button{
-    outline: none;  
 }
-
-.btn:focus,
-.btn:hover,
-.btn.active.focus {
-    outline: none;          
-}
-
-:focus {outline:none;}
