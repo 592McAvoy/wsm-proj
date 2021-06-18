@@ -118,6 +118,7 @@ def split(a, n):
 def fast_cosine_similarity(doc_score, page):
     "need to divide the length of document"
     wtf = doc_score[3]
+    
     return wtf/(len(page[1].split()) + len(page[2].split()))
 
 

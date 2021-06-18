@@ -258,12 +258,13 @@ class SearchManager:
             query, concurrent=concurrent, rank_mode=rank_mode)  # (id, score, terms)
         if doc_scores is None:
             print(f'No valid input in {query}')
+            # return 0
             return None, '', querys, 0
 
         if fuzzy_query != query:
             doc_scores_fuzzy, unique_terms_fuzzy = self._search(fuzzy_query, concurrent=concurrent, rank_mode=rank_mode)
-            unique_terms = set.union(unique_terms, unique_terms_fuzzy)
             if doc_scores_fuzzy is not None:
+                unique_terms = set.union(unique_terms, unique_terms_fuzzy)
                 doc_scores.extend(doc_scores_fuzzy)
                 doc_scores = sorted(doc_scores,
                                     key=lambda d: d[1],
@@ -349,7 +350,7 @@ class SearchManager:
 
         time_str = '{:.3f}'.format(time_cost)
 
-        
+        # return time_cost
 
         # for page in page_list:
         #     # print("ID: {}\tScores: {}\tTerms:{}".format(

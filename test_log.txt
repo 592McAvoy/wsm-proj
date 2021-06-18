@@ -1,0 +1,19 @@
+# Test statics　
+Mode 1: max:12.5573	min:0.0	avg:3.632	std:3.157
+Mode 2: max:12.1316	min:0.0	avg:3.439	std:2.964
+Mode 3: max:28.9742	min:0.0	avg:4.488	std:5.077
+Mode 4: max:12.3337	min:0.0	avg:3.696	std:3.023
+Mode 5: max:11.9622	min:0.0	avg:3.931	std:3.465
+
+# search hyper params
+max_docs_per_term = 100
+max_return_docs = 10 
+max_return_docs_firststep = max_return_docs * 3 
+
+# weighted zone weights
+w_title = 0.8
+w_body = 0.2 
+
+# data
+Vocab size: 5405638
+Total Docs: 4599026
